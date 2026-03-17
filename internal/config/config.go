@@ -1,0 +1,108 @@
+package config
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
+)
+
+// ConfigDir returns the configuration directory path, respecting XDG_CONFIG_HOME.
+func ConfigDir() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "jenkins-cli")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
+	}
+	return filepath.Join(home, ".config", "jenkins-cli")
+}
+
+// ConfigPath returns the full path to the config file.
+func ConfigPath() string {
+	return filepath.Join(ConfigDir(), "config.yaml")
+}
+
+// Load reads the config file from disk. Returns a default config if file doesn't exist.
+func Load() (*Config, error) {
+	cfg := &Config{
+		Profiles: make(map[string]Profile),
+	}
+
+	data, err := os.ReadFile(ConfigPath())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cfg, nil
+		}
+		return nil, fmt.Errorf("reading config: %w", err)
+	}
+
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("parsing config: %w", err)
+	}
+
+	if cfg.Profiles == nil {
+		cfg.Profiles = make(map[string]Profile)
+	}
+
+	return cfg, nil
+}
+
+// Save writes the config to disk, creating directories as needed.
+func Save(cfg *Config) error {
+	dir := ConfigDir()
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("creating config directory: %w", err)
+	}
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("marshaling config: %w", err)
+	}
+
+	if err := os.WriteFile(ConfigPath(), data, 0o600); err != nil {
+		return fmt.Errorf("writing config: %w", err)
+	}
+
+	return nil
+}
+
+// SetProfile adds or updates a profile in the config.
+func SetProfile(cfg *Config, name string, profile Profile) {
+	cfg.Profiles[name] = profile
+}
+
+// DeleteProfile removes a profile from the config.
+func DeleteProfile(cfg *Config, name string) error {
+	if _, ok := cfg.Profiles[name]; !ok {
+		return fmt.Errorf("profile %q not found", name)
+	}
+	delete(cfg.Profiles, name)
+	if cfg.CurrentProfile == name {
+		cfg.CurrentProfile = ""
+	}
+	return nil
+}
+
+// SetCurrentProfile sets the active profile.
+func SetCurrentProfile(cfg *Config, name string) error {
+	if _, ok := cfg.Profiles[name]; !ok {
+		return fmt.Errorf("profile %q not found", name)
+	}
+	cfg.CurrentProfile = name
+	return nil
+}
+
+// GetCurrentProfile returns the currently active profile.
+func GetCurrentProfile(cfg *Config) (Profile, error) {
+	if cfg.CurrentProfile == "" {
+		return Profile{}, fmt.Errorf("no current profile set")
+	}
+	p, ok := cfg.Profiles[cfg.CurrentProfile]
+	if !ok {
+		return Profile{}, fmt.Errorf("current profile %q not found in profiles", cfg.CurrentProfile)
+	}
+	return p, nil
+}
