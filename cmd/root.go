@@ -3,12 +3,15 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/spf13/cobra"
 
 	"github.com/piyush-gambhir/jenkins-cli/internal/client"
 	"github.com/piyush-gambhir/jenkins-cli/internal/config"
 	"github.com/piyush-gambhir/jenkins-cli/internal/output"
+	"github.com/piyush-gambhir/jenkins-cli/internal/update"
+	"github.com/piyush-gambhir/jenkins-cli/internal/version"
 )
 
 var (
@@ -26,6 +29,11 @@ var (
 	cfg           *config.Config
 	jenkinsClient *client.Client
 	outFormat     output.Format
+
+	// Update check state
+	updateInfo   *update.UpdateInfo
+	updateInfoMu sync.Mutex
+	updateWg     sync.WaitGroup
 )
 
 var rootCmd = &cobra.Command{
@@ -33,8 +41,14 @@ var rootCmd = &cobra.Command{
 	Short: "Jenkins CLI — manage Jenkins from the command line",
 	Long:  "A comprehensive command-line interface for interacting with Jenkins CI/CD servers.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Start background update check for commands that should show it
+		cmdName := cmd.Name()
+		if cmdName != "update" && cmdName != "version" {
+			startBackgroundUpdateCheck()
+		}
+
 		// Skip auth for commands that don't need it
-		if cmd.Name() == "version" || cmd.Name() == "help" || cmd.Name() == "login" {
+		if cmdName == "version" || cmdName == "help" || cmdName == "login" || cmdName == "update" {
 			return nil
 		}
 		// Also skip for parent commands (they have subcommands)
@@ -88,8 +102,52 @@ var rootCmd = &cobra.Command{
 		jenkinsClient = client.NewClient(profile)
 		return nil
 	},
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		// Wait for background update check and print notice if available.
+		// Skip for update and version commands.
+		cmdName := cmd.Name()
+		if cmdName == "update" || cmdName == "version" {
+			return nil
+		}
+
+		updateWg.Wait()
+
+		updateInfoMu.Lock()
+		info := updateInfo
+		updateInfoMu.Unlock()
+
+		if info != nil && info.Available {
+			update.PrintUpdateNotice(os.Stderr, info)
+		}
+
+		return nil
+	},
 	SilenceUsage:  true,
 	SilenceErrors: true,
+}
+
+// startBackgroundUpdateCheck launches a goroutine to check for updates using
+// the 24h cache so it doesn't slow down normal command execution.
+func startBackgroundUpdateCheck() {
+	updateWg.Add(1)
+	go func() {
+		defer updateWg.Done()
+
+		info, err := update.CheckForUpdate(
+			version.Version,
+			"piyush-gambhir/jenkins-cli",
+			config.ConfigDir(),
+			false,
+		)
+		if err != nil {
+			// Silently ignore update check failures
+			return
+		}
+
+		updateInfoMu.Lock()
+		updateInfo = info
+		updateInfoMu.Unlock()
+	}()
 }
 
 // Execute runs the root command.
@@ -125,4 +183,5 @@ func init() {
 	rootCmd.AddCommand(newUserCmd())
 	rootCmd.AddCommand(newPipelineCmd())
 	rootCmd.AddCommand(newSystemCmd())
+	rootCmd.AddCommand(newUpdateCmd())
 }
