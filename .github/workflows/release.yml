@@ -29,7 +29,4 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
-          # For cross-repo homebrew tap push, use a PAT token stored as GH_PAT
-          # instead of GITHUB_TOKEN. Create a fine-grained PAT with contents:write
-          # permission on the homebrew-tap repo and add it as a repository secret.
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
