@@ -44,15 +44,3 @@ changelog:
       - Merge pull request
       - Merge branch
 
-brews:
-  - repository:
-      owner: piyush-gambhir
-      name: homebrew-tap
-    name: jenkins-cli
-    homepage: "https://github.com/piyush-gambhir/jenkins-cli"
-    description: "CLI for managing Jenkins jobs, builds, nodes, plugins, and more"
-    license: "MIT"
-    install: |
-      bin.install "jenkins"
-    test: |
-      system "#{bin}/jenkins", "version"
