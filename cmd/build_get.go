@@ -14,7 +14,23 @@ func newBuildGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <job-path> <build-number>",
 		Short: "Get build details",
-		Long:  "Display detailed information about a specific build.",
+		Long: `Display detailed information about a specific build.
+
+Shows build number, display name, URL, result, building status, timestamp,
+duration, description, artifacts, and change set information.
+
+Examples:
+  # Get details about build #42
+  jenkins build get my-pipeline 42
+
+  # Get build info for a job in a folder
+  jenkins build get my-folder/my-pipeline 10
+
+  # Output as JSON
+  jenkins build get my-pipeline 42 -o json
+
+  # Output as YAML
+  jenkins build get my-pipeline 42 -o yaml`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

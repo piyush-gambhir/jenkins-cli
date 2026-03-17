@@ -13,7 +13,17 @@ func newWhoAmICmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "whoami",
 		Short: "Show current user information",
-		Long:  "Display information about the currently authenticated Jenkins user.",
+		Long: `Display information about the currently authenticated Jenkins user.
+
+Shows the user ID, full name, URL, and description of the user whose
+credentials are being used for authentication.
+
+Examples:
+  # Show current user info
+  jenkins whoami
+
+  # Output as JSON
+  jenkins whoami -o json`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			user, err := jenkinsClient.WhoAmI()

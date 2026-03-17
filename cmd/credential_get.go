@@ -16,7 +16,20 @@ func newCredentialGetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <credential-id>",
 		Short: "Get credential details",
-		Long:  "Display details about a specific credential.",
+		Long: `Display details about a specific credential.
+
+Shows the credential's ID, type, display name, and description. Note
+that secret values (passwords, keys) are never exposed via the API.
+
+Examples:
+  # Get a credential by ID
+  jenkins credential get my-ssh-key
+
+  # Get a credential from a specific store/domain
+  jenkins credential get my-cred --store system --domain my-domain
+
+  # Output as JSON
+  jenkins credential get my-cred -o json`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]

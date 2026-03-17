@@ -14,7 +14,17 @@ func newPluginCheckUpdatesCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check-updates",
 		Short: "Check for plugin updates",
-		Long:  "Check for available plugin updates.",
+		Long: `Check for available plugin updates.
+
+Triggers an update check against the Jenkins update center and lists
+all plugins that have newer versions available.
+
+Examples:
+  # Check for plugin updates
+  jenkins plugin check-updates
+
+  # Output as JSON
+  jenkins plugin check-updates -o json`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			updates, err := jenkinsClient.CheckPluginUpdates()

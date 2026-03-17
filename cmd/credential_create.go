@@ -15,7 +15,27 @@ func newCredentialCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a credential",
-		Long:  "Create a new credential from an XML configuration file.",
+		Long: `Create a new credential from an XML configuration file.
+
+The --from-file flag is required and must point to a valid Jenkins
+credentials XML file. Use --store and --domain to target a specific
+credential store and domain.
+
+Example XML for a username/password credential:
+  <com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl>
+    <scope>GLOBAL</scope>
+    <id>my-cred-id</id>
+    <username>admin</username>
+    <password>secret</password>
+    <description>My credential</description>
+  </com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl>
+
+Examples:
+  # Create a credential from XML
+  jenkins credential create --from-file cred.xml
+
+  # Create in a specific store and domain
+  jenkins credential create --from-file cred.xml --store system --domain my-domain`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if fromFile == "" {

@@ -13,7 +13,14 @@ func newPluginUninstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "uninstall <plugin-name>",
 		Short: "Uninstall a plugin",
-		Long:  "Uninstall a Jenkins plugin. A restart will be required.",
+		Long: `Uninstall a Jenkins plugin. A restart will be required.
+
+Marks the plugin for removal. Jenkins must be restarted for the change
+to take effect. Requires --confirm.
+
+Examples:
+  # Uninstall a plugin
+  jenkins plugin uninstall git --confirm`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

@@ -13,7 +13,17 @@ func newNodeDisableCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable <node-name>",
 		Short: "Take a node offline",
-		Long:  "Take a Jenkins node offline with an optional message.",
+		Long: `Take a Jenkins node offline with an optional message.
+
+Marks a node as temporarily offline. No new builds will be assigned to
+this node. Use --message to provide a reason.
+
+Examples:
+  # Take a node offline
+  jenkins node disable my-agent
+
+  # Take a node offline with a reason
+  jenkins node disable my-agent --message "Maintenance window"`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

@@ -14,7 +14,16 @@ func newUserListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List users",
-		Long:  "List all known Jenkins users.",
+		Long: `List all known Jenkins users.
+
+Displays each user's ID, full name, and last activity timestamp.
+
+Examples:
+  # List all users
+  jenkins user list
+
+  # Output as JSON
+  jenkins user list -o json`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			users, err := jenkinsClient.ListUsers()

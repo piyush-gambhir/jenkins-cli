@@ -13,7 +13,14 @@ func newViewDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <view-name>",
 		Short: "Delete a view",
-		Long:  "Delete a Jenkins view.",
+		Long: `Delete a Jenkins view.
+
+Removes the view from the Jenkins dashboard. This does not delete the
+jobs contained in the view. Requires --confirm.
+
+Examples:
+  # Delete a view
+  jenkins view delete "My View" --confirm`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

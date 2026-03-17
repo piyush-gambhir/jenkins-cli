@@ -18,7 +18,20 @@ func newLoginCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Authenticate with a Jenkins server",
-		Long:  "Interactively configure a Jenkins server connection profile. Prompts for URL, username, and API token, then tests the connection.",
+		Long: `Interactively configure a Jenkins server connection profile.
+
+Prompts for the Jenkins URL, username, and API token, then tests the
+connection. The profile is saved to the config file for future use.
+
+Jenkins requires an API token (not your password). Generate one at:
+  <jenkins-url>/user/<username>/configure  (API Token section)
+
+Examples:
+  # Interactive login (prompts for all values)
+  jenkins login
+
+  # Login and save with a specific profile name
+  jenkins login --name staging`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			reader := bufio.NewReader(os.Stdin)

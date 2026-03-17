@@ -14,7 +14,21 @@ func newBuildStagesCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "stages <job-path> <build-number>",
 		Short: "Get pipeline stages",
-		Long:  "Display pipeline stage information for a build.",
+		Long: `Display pipeline stage information for a build.
+
+Shows each pipeline stage's name, status, and duration. This is only
+available for pipeline (Jenkinsfile) jobs. Uses the Pipeline Stage View
+(wfapi) endpoint.
+
+Examples:
+  # View stages for build #42
+  jenkins build stages my-pipeline 42
+
+  # Output stages as JSON
+  jenkins build stages my-pipeline 42 -o json
+
+  # View stages for a job in a folder
+  jenkins build stages my-folder/my-pipeline 10`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

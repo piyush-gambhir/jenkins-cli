@@ -13,7 +13,21 @@ func newPluginInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install <plugin-name>",
 		Short: "Install a plugin",
-		Long:  "Install a Jenkins plugin by name. Optionally specify a version.",
+		Long: `Install a Jenkins plugin by name. Optionally specify a version.
+
+Initiates plugin installation on the Jenkins server. A restart may be
+required for the plugin to become active. Use --version to install a
+specific version.
+
+Examples:
+  # Install the latest version of the git plugin
+  jenkins plugin install git
+
+  # Install a specific version
+  jenkins plugin install git --version 5.2.0
+
+  # Install the Blue Ocean plugin
+  jenkins plugin install blueocean`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

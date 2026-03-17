@@ -14,7 +14,26 @@ func newJobGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <job-path>",
 		Short: "Get job details",
-		Long:  "Display detailed information about a specific job.",
+		Long: `Display detailed information about a specific job.
+
+Shows the job name, URL, buildable status, health report, last build
+info, parameters (if any), and child jobs (if it is a folder).
+
+Examples:
+  # Get details about a root-level job
+  jenkins job get my-pipeline
+
+  # Get details about a job in a folder
+  jenkins job get my-folder/my-pipeline
+
+  # Get details about a nested folder job
+  jenkins job get team/project/deploy-pipeline
+
+  # Output as JSON
+  jenkins job get my-pipeline -o json
+
+  # Output as YAML
+  jenkins job get my-pipeline -o yaml`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

@@ -14,7 +14,21 @@ func newBuildEnvCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "env <job-path> <build-number>",
 		Short: "Get build environment variables",
-		Long:  "Display the injected environment variables for a build.",
+		Long: `Display the injected environment variables for a build.
+
+Lists all environment variables that were injected into the build
+environment, sorted alphabetically by key. Requires the Environment
+Injector plugin to be installed on Jenkins.
+
+Examples:
+  # View env vars for build #42
+  jenkins build env my-pipeline 42
+
+  # Output as JSON for scripting
+  jenkins build env my-pipeline 42 -o json
+
+  # Output as YAML
+  jenkins build env my-pipeline 42 -o yaml`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

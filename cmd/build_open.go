@@ -16,7 +16,17 @@ func newBuildOpenCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "open <job-path> <build-number>",
 		Short: "Open build in browser",
-		Long:  "Open the build page in your default web browser.",
+		Long: `Open the build page in your default web browser.
+
+Constructs the build URL and opens it using the system's default browser
+(macOS: open, Linux: xdg-open, Windows: rundll32).
+
+Examples:
+  # Open build #42 in the browser
+  jenkins build open my-pipeline 42
+
+  # Open a build for a job in a folder
+  jenkins build open my-folder/my-pipeline 10`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

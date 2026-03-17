@@ -13,7 +13,16 @@ func newUserGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <user-id>",
 		Short: "Get user details",
-		Long:  "Display details about a specific Jenkins user.",
+		Long: `Display details about a specific Jenkins user.
+
+Shows the user's ID, full name, URL, and description.
+
+Examples:
+  # Get user details
+  jenkins user get admin
+
+  # Output as JSON
+  jenkins user get admin -o json`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]

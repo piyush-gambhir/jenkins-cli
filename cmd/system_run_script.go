@@ -14,7 +14,26 @@ func newSystemRunScriptCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run-script",
 		Short: "Execute a Groovy script",
-		Long:  "Execute a Groovy script on the Jenkins controller via the script console.",
+		Long: `Execute a Groovy script on the Jenkins controller via the script console.
+
+Runs an arbitrary Groovy script on the Jenkins controller and prints
+the output. Provide the script inline via --script or from a file via
+--from-file. One of the two is required.
+
+WARNING: Scripts run with full Jenkins controller access. Use with caution.
+
+Examples:
+  # Run an inline Groovy script
+  jenkins system run-script --script 'println Jenkins.instance.numExecutors'
+
+  # Run a script from a file
+  jenkins system run-script --from-file my-script.groovy
+
+  # Get system properties
+  jenkins system run-script --script 'System.getProperties().each { k, v -> println "$k=$v" }'
+
+  # List all jobs via Groovy
+  jenkins system run-script --script 'Jenkins.instance.allItems.each { println it.fullName }'`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var scriptContent string

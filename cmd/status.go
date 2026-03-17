@@ -13,7 +13,20 @@ func newStatusCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show Jenkins server status",
-		Long:  "Display information about the connected Jenkins server including version, mode, security, and node count.",
+		Long: `Display information about the connected Jenkins server including version, mode, security, and executor count.
+
+Shows the server URL, version, mode, security settings, executor count,
+quiet-down status, and description.
+
+Examples:
+  # Show server status
+  jenkins status
+
+  # Output as JSON
+  jenkins status -o json
+
+  # Use a specific profile
+  jenkins status --profile staging`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			info, err := jenkinsClient.GetServerInfo()

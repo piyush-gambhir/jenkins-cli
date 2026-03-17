@@ -13,7 +13,17 @@ func newJobDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <job-path>",
 		Short: "Delete a job",
-		Long:  "Permanently delete a Jenkins job. Use --confirm to skip the confirmation prompt.",
+		Long: `Permanently delete a Jenkins job. Use --confirm to skip the confirmation prompt.
+
+WARNING: This operation is irreversible. The job and all its build
+history will be permanently removed.
+
+Examples:
+  # Delete a job (requires --confirm)
+  jenkins job delete my-pipeline --confirm
+
+  # Delete a job in a folder
+  jenkins job delete my-folder/my-pipeline --confirm`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

@@ -14,7 +14,17 @@ func newSystemRestartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "restart",
 		Short: "Restart Jenkins",
-		Long:  "Restart the Jenkins server. Use --safe to wait for running builds to complete.",
+		Long: `Restart the Jenkins server. Use --safe to wait for running builds to complete.
+
+A normal restart stops Jenkins immediately. A safe restart waits for
+all running builds to complete before restarting. Requires --confirm.
+
+Examples:
+  # Immediate restart
+  jenkins system restart --confirm
+
+  # Safe restart (wait for builds to finish)
+  jenkins system restart --safe --confirm`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !confirm {

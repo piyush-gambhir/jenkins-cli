@@ -11,7 +11,17 @@ func newJobDisableCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "disable <job-path>",
 		Short: "Disable a job",
-		Long:  "Disable a Jenkins job so it cannot be built.",
+		Long: `Disable a Jenkins job so it cannot be built.
+
+A disabled job cannot be triggered manually or by SCM changes. Use
+"jenkins job enable" to re-enable it.
+
+Examples:
+  # Disable a job
+  jenkins job disable my-pipeline
+
+  # Disable a job in a folder
+  jenkins job disable my-folder/my-pipeline`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

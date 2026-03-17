@@ -13,7 +13,17 @@ func newViewCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create <view-name>",
 		Short: "Create a new view",
-		Long:  "Create a new Jenkins view.",
+		Long: `Create a new Jenkins view.
+
+Creates an empty view. Use --type to specify the view type class name.
+After creation, use "jenkins view add-job" to add jobs to the view.
+
+Examples:
+  # Create a list view (default type)
+  jenkins view create "My Team"
+
+  # Create a view with a specific type
+  jenkins view create "Dashboard" --type hudson.model.ListView`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

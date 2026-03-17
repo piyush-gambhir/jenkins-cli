@@ -11,15 +11,63 @@ import (
 )
 
 func newNodeListCmd() *cobra.Command {
-	return &cobra.Command{
+	var offlineOnly bool
+	var onlineOnly bool
+
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List nodes",
-		Long:  "List all Jenkins nodes/agents.",
-		Args:  cobra.NoArgs,
+		Long: `List all Jenkins nodes/agents.
+
+Displays each node's name, executor count, idle status, offline status,
+and offline reason (if any). Use --offline or --online to filter by
+connectivity state. These two flags are mutually exclusive.
+
+Examples:
+  # List all nodes
+  jenkins node list
+
+  # List only offline nodes
+  jenkins node list --offline
+
+  # List only online nodes
+  jenkins node list --online
+
+  # Output as JSON
+  jenkins node list -o json
+
+  # Output as YAML
+  jenkins node list -o yaml`,
+		Args: cobra.NoArgs,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if offlineOnly && onlineOnly {
+				return fmt.Errorf("--offline and --online are mutually exclusive")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nodes, err := jenkinsClient.ListNodes()
 			if err != nil {
 				return fmt.Errorf("listing nodes: %w", err)
+			}
+
+			// Filter by online/offline status
+			if offlineOnly {
+				var filtered []client.Node
+				for _, n := range nodes {
+					if n.Offline {
+						filtered = append(filtered, n)
+					}
+				}
+				nodes = filtered
+			} else if onlineOnly {
+				var filtered []client.Node
+				for _, n := range nodes {
+					if !n.Offline {
+						filtered = append(filtered, n)
+					}
+				}
+				nodes = filtered
 			}
 
 			if len(nodes) == 0 {
@@ -51,4 +99,9 @@ func newNodeListCmd() *cobra.Command {
 			return output.Print(os.Stdout, outFormat, nodes, tableDef)
 		},
 	}
+
+	cmd.Flags().BoolVar(&offlineOnly, "offline", false, "Show only offline nodes")
+	cmd.Flags().BoolVar(&onlineOnly, "online", false, "Show only online nodes")
+
+	return cmd
 }

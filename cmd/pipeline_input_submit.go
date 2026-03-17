@@ -14,7 +14,20 @@ func newPipelineInputSubmitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "input-submit <job-path> <build-number> <input-id>",
 		Short: "Submit a pipeline input",
-		Long:  "Proceed with a pending pipeline input action, optionally providing parameters.",
+		Long: `Proceed with a pending pipeline input action, optionally providing parameters.
+
+Use "jenkins pipeline input-list" to find the input ID, then submit it
+with this command. Use --param to provide input parameters if required.
+
+Examples:
+  # Submit an input (proceed)
+  jenkins pipeline input-submit my-pipeline 42 my-input-id
+
+  # Submit with parameters
+  jenkins pipeline input-submit my-pipeline 42 my-input-id --param APPROVE=yes
+
+  # Submit with multiple parameters
+  jenkins pipeline input-submit my-pipeline 42 deploy-approval --param ENV=prod --param VERSION=1.0`,
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

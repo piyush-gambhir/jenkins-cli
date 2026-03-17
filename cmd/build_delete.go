@@ -15,7 +15,17 @@ func newBuildDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <job-path> <build-number>",
 		Short: "Delete a build",
-		Long:  "Permanently delete a build record.",
+		Long: `Permanently delete a build record.
+
+WARNING: This operation is irreversible. The build record, console log,
+and artifacts will be permanently removed. Requires --confirm.
+
+Examples:
+  # Delete build #42
+  jenkins build delete my-pipeline 42 --confirm
+
+  # Delete a build for a job in a folder
+  jenkins build delete my-folder/my-pipeline 10 --confirm`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

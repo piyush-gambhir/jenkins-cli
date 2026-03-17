@@ -20,7 +20,37 @@ func newJobBuildCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "build <job-path>",
 		Short: "Trigger a build",
-		Long:  "Trigger a build for a Jenkins job. Optionally wait for completion or follow the console log.",
+		Long: `Trigger a build for a Jenkins job. Optionally wait for completion or follow the console log.
+
+Use --param to pass build parameters (repeatable). Use --wait to block
+until the build completes. Use --follow to stream the console output in
+real time. Use --timeout to set a maximum wait duration (default 30m).
+
+When --wait and --follow are both set, the CLI waits for the build to
+complete and then prints the full console output. When only --follow is
+set, the CLI streams the console output as the build runs.
+
+Examples:
+  # Trigger a simple build
+  jenkins job build my-pipeline
+
+  # Trigger a parameterized build
+  jenkins job build my-pipeline --param BRANCH=main --param ENV=staging
+
+  # Trigger and wait for completion
+  jenkins job build my-pipeline --wait
+
+  # Trigger and stream console output in real time
+  jenkins job build my-pipeline --follow
+
+  # Trigger with params, wait, and stream output
+  jenkins job build my-pipeline --param BRANCH=main --wait --follow
+
+  # Set a custom timeout (default is 30m)
+  jenkins job build my-pipeline --wait --timeout 1h
+
+  # Build a job inside a folder
+  jenkins job build my-folder/my-pipeline --param VERSION=1.2.3`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

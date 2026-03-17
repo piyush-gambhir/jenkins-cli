@@ -14,7 +14,18 @@ func newPipelineInputListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "input-list <job-path> <build-number>",
 		Short: "List pending pipeline inputs",
-		Long:  "List pending input actions for a pipeline build.",
+		Long: `List pending input actions for a pipeline build.
+
+When a pipeline has an "input" step, the build pauses and waits for
+user action. This command lists all such pending inputs including their
+ID, message, and available actions (proceed/abort text).
+
+Examples:
+  # List pending inputs for build #42
+  jenkins pipeline input-list my-pipeline 42
+
+  # Output as JSON
+  jenkins pipeline input-list my-pipeline 42 -o json`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

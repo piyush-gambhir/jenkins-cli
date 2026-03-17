@@ -39,7 +39,21 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "jenkins",
 	Short: "Jenkins CLI — manage Jenkins from the command line",
-	Long:  "A comprehensive command-line interface for interacting with Jenkins CI/CD servers.",
+	Long: `A comprehensive command-line interface for interacting with Jenkins CI/CD servers.
+
+Manage jobs, builds, nodes, plugins, credentials, pipelines, views, and
+system administration from the terminal. Designed for both human operators
+and coding agents (LLMs).
+
+Quick start:
+  jenkins login                           # authenticate with a Jenkins server
+  jenkins status                          # check server connectivity
+  jenkins job list                        # list all jobs
+  jenkins job build my-pipeline --follow  # trigger a build and stream logs
+
+All list/get commands support -o json and -o yaml for machine-readable output.
+
+Use "jenkins <command> --help" for detailed information about any command.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Start background update check for commands that should show it
 		cmdName := cmd.Name()

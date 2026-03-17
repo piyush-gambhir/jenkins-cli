@@ -18,7 +18,24 @@ func newBuildArtifactsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "artifacts <job-path> <build-number>",
 		Short: "List or download build artifacts",
-		Long:  "List artifacts for a build. Use --download to download them.",
+		Long: `List artifacts for a build. Use --download to download them.
+
+By default, displays a table of artifact file names and paths. Use
+--download to save all artifacts to the current directory (or specify
+--output-dir for a custom location).
+
+Examples:
+  # List artifacts of build #42
+  jenkins build artifacts my-pipeline 42
+
+  # Download all artifacts to the current directory
+  jenkins build artifacts my-pipeline 42 --download
+
+  # Download artifacts to a specific directory
+  jenkins build artifacts my-pipeline 42 --download --output-dir ./artifacts
+
+  # List artifacts as JSON
+  jenkins build artifacts my-pipeline 42 -o json`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

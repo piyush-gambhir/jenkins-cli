@@ -14,7 +14,17 @@ func newViewGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <view-name>",
 		Short: "Get view details",
-		Long:  "Display detailed information about a view including its jobs.",
+		Long: `Display detailed information about a view including its jobs.
+
+Shows the view's name, URL, description, and all jobs contained in it
+with their current status.
+
+Examples:
+  # Get details about a view
+  jenkins view get "My View"
+
+  # Output as JSON
+  jenkins view get "All" -o json`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

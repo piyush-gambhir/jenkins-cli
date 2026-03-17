@@ -11,7 +11,15 @@ func newSystemQuietDownCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "quiet-down",
 		Short: "Put Jenkins into quiet-down mode",
-		Long:  "Put Jenkins into quiet-down mode. No new builds will be started.",
+		Long: `Put Jenkins into quiet-down mode. No new builds will be started.
+
+In quiet-down mode, Jenkins will not start any new builds. Builds
+already running will continue. This is useful before a planned
+restart or maintenance window.
+
+Examples:
+  # Enter quiet-down mode
+  jenkins system quiet-down`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := jenkinsClient.QuietDown(); err != nil {

@@ -13,7 +13,20 @@ func newNodeGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <node-name>",
 		Short: "Get node details",
-		Long:  "Display detailed information about a specific node.",
+		Long: `Display detailed information about a specific node.
+
+Shows the node's name, description, executor count, idle and offline
+status, JNLP agent status, and offline reason (if applicable).
+
+Examples:
+  # Get details about a node
+  jenkins node get my-agent
+
+  # Get details about the built-in node
+  jenkins node get "(built-in)"
+
+  # Output as JSON
+  jenkins node get my-agent -o json`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

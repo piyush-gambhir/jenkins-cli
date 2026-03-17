@@ -13,7 +13,13 @@ func newNodeDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <node-name>",
 		Short: "Delete a node",
-		Long:  "Permanently delete a Jenkins node/agent.",
+		Long: `Permanently delete a Jenkins node/agent.
+
+WARNING: This operation is irreversible. Requires --confirm.
+
+Examples:
+  # Delete a node
+  jenkins node delete my-agent --confirm`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

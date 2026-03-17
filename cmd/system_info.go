@@ -13,7 +13,21 @@ func newSystemInfoCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "info",
 		Short: "Show system information",
-		Long:  "Display detailed Jenkins system information.",
+		Long: `Display detailed Jenkins system information.
+
+Shows the server URL, version, mode, description, executor count,
+security status, CSRF protection status, quiet-down state, and primary
+view information.
+
+Examples:
+  # Show system info
+  jenkins system info
+
+  # Output as JSON
+  jenkins system info -o json
+
+  # Output as YAML
+  jenkins system info -o yaml`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			info, err := jenkinsClient.GetServerInfo()

@@ -13,7 +13,20 @@ func newPluginGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <plugin-name>",
 		Short: "Get plugin details",
-		Long:  "Display detailed information about an installed plugin.",
+		Long: `Display detailed information about an installed plugin.
+
+Shows the plugin's full name, version, active/enabled status, pinned
+status, URL, backup version, and dependencies.
+
+Examples:
+  # Get details about the git plugin
+  jenkins plugin get git
+
+  # Get details about the pipeline plugin
+  jenkins plugin get workflow-aggregator
+
+  # Output as JSON
+  jenkins plugin get git -o json`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

@@ -14,7 +14,16 @@ func newViewListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List views",
-		Long:  "List all Jenkins views.",
+		Long: `List all Jenkins views.
+
+Displays each view's name, URL, and description.
+
+Examples:
+  # List all views
+  jenkins view list
+
+  # Output as JSON
+  jenkins view list -o json`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			views, err := jenkinsClient.ListViews()

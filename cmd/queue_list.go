@@ -14,7 +14,18 @@ func newQueueListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
 		Short: "List queued items",
-		Long:  "List all items currently in the Jenkins build queue.",
+		Long: `List all items currently in the Jenkins build queue.
+
+Shows each queued item's ID, task name, reason for being queued, and
+whether it is stuck or blocked. An empty queue means all builds have
+been assigned executors.
+
+Examples:
+  # List all queued builds
+  jenkins queue list
+
+  # Output as JSON
+  jenkins queue list -o json`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			items, err := jenkinsClient.ListQueue()

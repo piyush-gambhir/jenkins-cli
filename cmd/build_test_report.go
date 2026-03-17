@@ -14,7 +14,21 @@ func newBuildTestReportCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "test-report <job-path> <build-number>",
 		Short: "Get build test report",
-		Long:  "Display the test report for a build including pass/fail/skip counts.",
+		Long: `Display the test report for a build including pass/fail/skip counts.
+
+Shows total, passed, failed, and skipped test counts along with duration.
+If there are failures, individual failed test cases are listed with their
+error messages.
+
+Examples:
+  # View test report for build #42
+  jenkins build test-report my-pipeline 42
+
+  # View test report as JSON (for parsing)
+  jenkins build test-report my-pipeline 42 -o json
+
+  # View test report for a job in a folder
+  jenkins build test-report my-folder/my-pipeline 10`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]

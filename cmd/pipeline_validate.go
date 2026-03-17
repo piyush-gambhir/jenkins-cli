@@ -13,7 +13,21 @@ func newPipelineValidateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate a Jenkinsfile",
-		Long:  "Validate a declarative Jenkinsfile using the Jenkins pipeline model converter.",
+		Long: `Validate a declarative Jenkinsfile using the Jenkins pipeline model converter.
+
+Sends the Jenkinsfile content to the Jenkins server for validation.
+Returns any syntax errors or "Jenkinsfile successfully validated" on
+success. The --from-file flag is required.
+
+Note: Only declarative pipelines can be validated. Scripted pipelines
+are not supported by this endpoint.
+
+Examples:
+  # Validate a Jenkinsfile
+  jenkins pipeline validate --from-file Jenkinsfile
+
+  # Validate a Jenkinsfile at a custom path
+  jenkins pipeline validate -f ./ci/Jenkinsfile`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if fromFile == "" {

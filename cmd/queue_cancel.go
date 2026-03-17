@@ -11,7 +11,14 @@ func newQueueCancelCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "cancel <queue-id>",
 		Short: "Cancel a queued item",
-		Long:  "Cancel a pending build in the queue by its ID.",
+		Long: `Cancel a pending build in the queue by its ID.
+
+Use "jenkins queue list" to find the queue item ID, then pass it to
+this command to cancel the pending build.
+
+Examples:
+  # Cancel queue item with ID 123
+  jenkins queue cancel 123`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseNumber(args[0])

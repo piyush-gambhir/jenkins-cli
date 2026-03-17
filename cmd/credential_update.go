@@ -15,7 +15,17 @@ func newCredentialUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <credential-id>",
 		Short: "Update a credential",
-		Long:  "Update an existing credential from an XML configuration file.",
+		Long: `Update an existing credential from an XML configuration file.
+
+The --from-file flag is required. This replaces the credential's entire
+configuration with the contents of the XML file.
+
+Examples:
+  # Update a credential
+  jenkins credential update my-cred-id --from-file updated-cred.xml
+
+  # Update in a specific store and domain
+  jenkins credential update my-cred-id --from-file cred.xml --store system --domain my-domain`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]

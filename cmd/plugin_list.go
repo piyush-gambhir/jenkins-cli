@@ -12,12 +12,34 @@ import (
 
 func newPluginListCmd() *cobra.Command {
 	var activeOnly bool
+	var enabledOnly bool
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List installed plugins",
-		Long:  "List all installed Jenkins plugins.",
-		Args:  cobra.NoArgs,
+		Long: `List all installed Jenkins plugins.
+
+Displays each plugin's short name, version, enabled status, and whether
+an update is available. Use --active to show only plugins that are both
+active and enabled. Use --enabled to show only enabled plugins (which
+may include inactive ones).
+
+Examples:
+  # List all installed plugins
+  jenkins plugin list
+
+  # List only active and enabled plugins
+  jenkins plugin list --active
+
+  # List only enabled plugins
+  jenkins plugin list --enabled
+
+  # Output as JSON for scripting
+  jenkins plugin list -o json
+
+  # Output as YAML
+  jenkins plugin list -o yaml`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			plugins, err := jenkinsClient.ListPlugins()
 			if err != nil {
@@ -28,6 +50,14 @@ func newPluginListCmd() *cobra.Command {
 				var filtered []client.Plugin
 				for _, p := range plugins {
 					if p.Active && p.Enabled {
+						filtered = append(filtered, p)
+					}
+				}
+				plugins = filtered
+			} else if enabledOnly {
+				var filtered []client.Plugin
+				for _, p := range plugins {
+					if p.Enabled {
 						filtered = append(filtered, p)
 					}
 				}
@@ -56,7 +86,8 @@ func newPluginListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&activeOnly, "active", false, "Show only active/enabled plugins")
+	cmd.Flags().BoolVar(&activeOnly, "active", false, "Show only active and enabled plugins")
+	cmd.Flags().BoolVar(&enabledOnly, "enabled", false, "Show only enabled plugins")
 
 	return cmd
 }
