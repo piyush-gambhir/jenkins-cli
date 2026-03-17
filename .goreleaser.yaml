@@ -1,0 +1,58 @@
+version: 2
+
+project_name: jenkins-cli
+
+builds:
+  - binary: jenkins
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goamd64:
+      - v1
+    exclude:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X github.com/piyush-gambhir/jenkins-cli/internal/version.Version={{.Version}} -X github.com/piyush-gambhir/jenkins-cli/internal/version.Commit={{.Commit}} -X github.com/piyush-gambhir/jenkins-cli/internal/version.BuildTime={{.Date}}
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+brews:
+  - repository:
+      owner: piyush-gambhir
+      name: homebrew-tap
+    name: jenkins-cli
+    homepage: "https://github.com/piyush-gambhir/jenkins-cli"
+    description: "CLI for managing Jenkins jobs, builds, nodes, plugins, and more"
+    license: "MIT"
+    install: |
+      bin.install "jenkins"
+    test: |
+      system "#{bin}/jenkins", "version"
