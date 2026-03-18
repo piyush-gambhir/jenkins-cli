@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +15,26 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/internal/config"
 )
 
+// sensitiveHeaders is the set of headers that should be redacted in verbose output.
+var sensitiveHeaders = map[string]bool{
+	"Authorization": true,
+	"Cookie":        true,
+}
+
+// redactAuthHeaders returns a copy of the headers with sensitive auth headers replaced
+// by [REDACTED]. Other headers (X-Request-Id, Content-Type, Jenkins-Crumb, etc.) remain visible.
+func redactAuthHeaders(headers http.Header) http.Header {
+	redacted := make(http.Header)
+	for key, values := range headers {
+		if sensitiveHeaders[http.CanonicalHeaderKey(key)] {
+			redacted[key] = []string{"[REDACTED]"}
+		} else {
+			redacted[key] = values
+		}
+	}
+	return redacted
+}
+
 // verboseTransport wraps an http.RoundTripper and logs request/response details to stderr.
 type verboseTransport struct {
 	transport http.RoundTripper
@@ -22,6 +43,11 @@ type verboseTransport struct {
 func (t *verboseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	start := time.Now()
 	fmt.Fprintf(os.Stderr, "--> %s %s\n", req.Method, req.URL)
+	for key, values := range redactAuthHeaders(req.Header) {
+		for _, v := range values {
+			fmt.Fprintf(os.Stderr, "    %s: %s\n", key, v)
+		}
+	}
 	resp, err := t.transport.RoundTrip(req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "<-- ERROR: %v (%v)\n", err, time.Since(start))
@@ -45,6 +71,14 @@ type Client struct {
 // When verbose is true, HTTP request/response details are logged to stderr.
 func NewClient(profile config.Profile, verbose ...bool) *Client {
 	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:        10,
+		IdleConnTimeout:     30 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+		DisableKeepAlives:   true,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: profile.Insecure,
 		},
@@ -222,7 +256,10 @@ func (c *Client) PostRaw(path string, query url.Values) (*http.Response, error) 
 
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("reading error response body: %w", err)
+		}
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
 			Status:     resp.Status,

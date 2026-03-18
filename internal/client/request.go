@@ -84,7 +84,10 @@ func checkResponse(resp *http.Response) error {
 	if resp.StatusCode < 400 {
 		return nil
 	}
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading error response body: %w", err)
+	}
 	return &APIError{
 		StatusCode: resp.StatusCode,
 		Status:     resp.Status,

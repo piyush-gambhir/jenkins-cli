@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -97,6 +100,29 @@ func newUpdateCmd() *cobra.Command {
 			if err := downloadFile(downloadURL, archivePath); err != nil {
 				return fmt.Errorf("downloading update: %w", err)
 			}
+
+			// Download and verify SHA256 checksum
+			checksumsURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/checksums.txt",
+				repo, info.LatestVersion)
+			checksumsPath := filepath.Join(tmpDir, "checksums.txt")
+			if err := downloadFile(checksumsURL, checksumsPath); err != nil {
+				return fmt.Errorf("downloading checksums: %w", err)
+			}
+
+			expectedHash, err := parseChecksum(checksumsPath, archive)
+			if err != nil {
+				return fmt.Errorf("reading checksums: %w", err)
+			}
+
+			actualHash, err := sha256File(archivePath)
+			if err != nil {
+				return fmt.Errorf("computing checksum: %w", err)
+			}
+
+			if !strings.EqualFold(actualHash, expectedHash) {
+				return fmt.Errorf("checksum mismatch for %s:\n  expected: %s\n  actual:   %s\nThe downloaded file may be corrupted or tampered with.", archive, expectedHash, actualHash)
+			}
+			fmt.Fprintln(os.Stderr, "Checksum verified.")
 
 			// Extract binary from tar.gz
 			fmt.Println("Extracting...")
@@ -230,4 +256,45 @@ func extractBinary(archivePath, destPath string) error {
 	}
 
 	return fmt.Errorf("binary 'jenkins' not found in archive")
+}
+
+// parseChecksum reads a GoReleaser checksums.txt and returns the SHA256 hash
+// for the given filename. Format: "<hash>  <filename>"
+func parseChecksum(checksumsPath, filename string) (string, error) {
+	f, err := os.Open(checksumsPath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// GoReleaser format: "hash  filename" (two spaces)
+		parts := strings.Fields(line)
+		if len(parts) == 2 && parts[1] == filename {
+			return parts[0], nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	return "", fmt.Errorf("checksum for %s not found in checksums.txt", filename)
+}
+
+// sha256File computes the SHA256 hash of a file and returns the hex string.
+func sha256File(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

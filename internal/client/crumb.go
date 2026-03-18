@@ -72,7 +72,10 @@ func (c *Client) fetchCrumb() (*Crumb, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("reading crumb error response: %w", err)
+		}
 		return nil, &APIError{
 			StatusCode: resp.StatusCode,
 			Status:     resp.Status,

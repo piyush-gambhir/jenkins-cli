@@ -1,9 +1,18 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/piyush-gambhir/jenkins-cli/internal/client"
+	"github.com/piyush-gambhir/jenkins-cli/internal/config"
+	"github.com/piyush-gambhir/jenkins-cli/internal/output"
 )
 
 // TestNoInputFlag_BlocksConfirmPrompt verifies that when noInputFlag is set,
@@ -179,6 +188,95 @@ func TestStdinFlag_FromFileAcceptsDash(t *testing.T) {
 				t.Fatalf("expected non-empty usage for --from-file on %s", tt.name)
 			}
 		})
+	}
+}
+
+// TestStructuredJSONError verifies that errors are formatted as structured JSON
+// when the output format is JSON.
+func TestStructuredJSONError(t *testing.T) {
+	var buf bytes.Buffer
+	testErr := errors.New("job not found: my-pipeline")
+
+	output.WriteError(&buf, output.FormatJSON, testErr, 404)
+
+	var parsed output.ErrorResponse
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v\nraw: %s", err, buf.String())
+	}
+
+	if parsed.Error != "job not found: my-pipeline" {
+		t.Errorf("expected error 'job not found: my-pipeline', got %q", parsed.Error)
+	}
+	if parsed.StatusCode != 404 {
+		t.Errorf("expected status_code 404, got %d", parsed.StatusCode)
+	}
+}
+
+// TestStructuredJSONError_APIError verifies that client.APIError errors produce
+// correct structured JSON output.
+func TestStructuredJSONError_APIError(t *testing.T) {
+	var buf bytes.Buffer
+	apiErr := &client.APIError{
+		StatusCode: 403,
+		Status:     "403 Forbidden",
+		Message:    "Permission denied",
+		URL:        "http://jenkins/job/my-pipeline/build",
+	}
+
+	output.WriteError(&buf, output.FormatJSON, apiErr, apiErr.StatusCode)
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v\nraw: %s", err, buf.String())
+	}
+
+	if parsed["status_code"] != float64(403) {
+		t.Errorf("expected status_code 403, got %v", parsed["status_code"])
+	}
+}
+
+// TestIdempotentDelete_IfExists verifies that --if-exists on delete commands
+// swallows a 404 error and returns success.
+func TestIdempotentDelete_IfExists(t *testing.T) {
+	// Create a mock server that returns 404 for delete
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/crumbIssuer/api/json" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		// Return 404 for the delete operation
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Not Found"))
+	}))
+	defer ts.Close()
+
+	// Save and restore global state
+	origClient := jenkinsClient
+	origNoInput := noInputFlag
+	origQuiet := quietFlag
+	defer func() {
+		jenkinsClient = origClient
+		noInputFlag = origNoInput
+		quietFlag = origQuiet
+	}()
+
+	jenkinsClient = client.NewClient(config.Profile{
+		URL:      ts.URL,
+		Username: "admin",
+		Token:    "tok",
+	})
+	noInputFlag = false
+	quietFlag = true
+
+	// Test job delete with --if-exists and --confirm
+	cmd := newJobDeleteCmd()
+	if err := cmd.ParseFlags([]string{"--confirm", "--if-exists"}); err != nil {
+		t.Fatalf("failed to parse flags: %v", err)
+	}
+
+	err := cmd.RunE(cmd, []string{"nonexistent-job"})
+	if err != nil {
+		t.Fatalf("expected no error with --if-exists on 404, got: %v", err)
 	}
 }
 

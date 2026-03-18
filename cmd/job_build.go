@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -66,6 +67,10 @@ Examples:
 				paramMap[parts[0]] = parts[1]
 			}
 
+			// Create a context with the --timeout duration to cover all phases
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
 			if wait || follow {
 				if !quietFlag {
 					fmt.Fprintf(os.Stdout, "Triggering build for %q and waiting...\n", jobPath)
@@ -119,7 +124,7 @@ Examples:
 				if !quietFlag {
 					fmt.Fprintf(os.Stdout, "Build #%d started. Streaming console...\n", buildRef.Number)
 				}
-				return jenkinsClient.StreamBuildLog(jobPath, buildRef.Number, os.Stdout)
+				return jenkinsClient.StreamBuildLog(jobPath, buildRef.Number, os.Stdout, ctx)
 			}
 
 			return nil

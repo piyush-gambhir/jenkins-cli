@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -169,11 +170,27 @@ func (c *Client) GetBuildLog(jobPath string, number int) (string, error) {
 }
 
 // StreamBuildLog streams the console output using the progressive text API.
-func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer) error {
+// If ctx is non-nil, it is respected: when the context expires during streaming,
+// the function returns cleanly with any partial output already written (not an error).
+func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ctx ...context.Context) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/logText/progressiveText", number)
 	start := "0"
 
+	var streamCtx context.Context
+	if len(ctx) > 0 && ctx[0] != nil {
+		streamCtx = ctx[0]
+	}
+
 	for {
+		// Check context before making a request
+		if streamCtx != nil {
+			select {
+			case <-streamCtx.Done():
+				return nil // return cleanly with partial output
+			default:
+			}
+		}
+
 		query := url.Values{"start": {start}}
 
 		resp, err := c.doRequest(requestOptions{
@@ -204,7 +221,16 @@ func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer) er
 			break
 		}
 
-		time.Sleep(1 * time.Second)
+		// Respect context during sleep
+		if streamCtx != nil {
+			select {
+			case <-streamCtx.Done():
+				return nil // return cleanly with partial output
+			case <-time.After(1 * time.Second):
+			}
+		} else {
+			time.Sleep(1 * time.Second)
+		}
 	}
 
 	return nil

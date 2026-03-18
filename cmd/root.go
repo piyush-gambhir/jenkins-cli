@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -34,10 +34,12 @@ var (
 	jenkinsClient *client.Client
 	outFormat     output.Format
 
-	// Update check state
-	updateInfo   *update.UpdateInfo
-	updateInfoMu sync.Mutex
-	updateWg     sync.WaitGroup
+	// OutputFormat is the exported package-level output format string, set
+	// during PersistentPreRunE so that main.go error handling can use it.
+	OutputFormat string
+
+	// Update check channel (replaces sync.Mutex pattern)
+	updateResult chan *update.UpdateInfo
 )
 
 var rootCmd = &cobra.Command{
@@ -86,58 +88,21 @@ Use "jenkins <command> --help" for detailed information about any command.`,
 			return nil
 		}
 
-		var err error
+		if err := loadConfig(cmd); err != nil {
+			return err
+		}
 
-		// Parse output format
-		outFormat, err = output.ParseFormat(outputFormat)
+		profile, err := resolveProfile(cmd)
 		if err != nil {
 			return err
 		}
 
-		// Load config
-		cfg, err = config.Load()
-		if err != nil {
-			return fmt.Errorf("loading config: %w", err)
+		if err := setupJenkinsClient(&profile); err != nil {
+			return err
 		}
 
-		// If output format not set via flag, try config default
-		if outputFormat == "" && cfg.Defaults.Output != "" {
-			outFormat, err = output.ParseFormat(cfg.Defaults.Output)
-			if err != nil {
-				return err
-			}
-		}
-
-		// Resolve auth
-		flags := config.FlagValues{
-			Server:      serverFlag,
-			User:        userFlag,
-			Token:       tokenFlag,
-			Insecure:    insecureFlag,
-			ServerSet:   cmd.Flags().Changed("server"),
-			UserSet:     cmd.Flags().Changed("user"),
-			TokenSet:    cmd.Flags().Changed("token"),
-			InsecureSet: cmd.Flags().Changed("insecure"),
-		}
-
-		profile, err := config.ResolveAuth(flags, os.LookupEnv, cfg, profileFlag)
-		if err != nil {
-			return fmt.Errorf("resolving auth: %w", err)
-		}
-
-		if profile.URL == "" {
-			return fmt.Errorf("Jenkins URL not configured. Run 'jenkins login' or set JENKINS_URL")
-		}
-
-		jenkinsClient = client.NewClient(profile, verboseFlag)
-
-		// Read-only enforcement: flag overrides profile config
-		effectiveReadOnly := profile.ReadOnly
-		if cmd.Flags().Changed("read-only") {
-			effectiveReadOnly = readOnlyFlag
-		}
-		if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
-			return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
+		if err := checkPermissions(cmd, &profile); err != nil {
+			return err
 		}
 
 		return nil
@@ -150,14 +115,17 @@ Use "jenkins <command> --help" for detailed information about any command.`,
 			return nil
 		}
 
-		updateWg.Wait()
+		if updateResult == nil {
+			return nil
+		}
 
-		updateInfoMu.Lock()
-		info := updateInfo
-		updateInfoMu.Unlock()
-
-		if info != nil && info.Available {
-			update.PrintUpdateNotice(os.Stderr, info)
+		select {
+		case info := <-updateResult:
+			if info != nil && info.Available {
+				update.PrintUpdateNotice(os.Stderr, info)
+			}
+		case <-time.After(2 * time.Second):
+			// Don't block the user if the update check is slow
 		}
 
 		return nil
@@ -169,25 +137,96 @@ Use "jenkins <command> --help" for detailed information about any command.`,
 // startBackgroundUpdateCheck launches a goroutine to check for updates using
 // the 24h cache so it doesn't slow down normal command execution.
 func startBackgroundUpdateCheck() {
-	updateWg.Add(1)
+	updateResult = make(chan *update.UpdateInfo, 1)
 	go func() {
-		defer updateWg.Done()
-
-		info, err := update.CheckForUpdate(
+		info, _ := update.CheckForUpdate(
 			version.Version,
 			"piyush-gambhir/jenkins-cli",
 			config.ConfigDir(),
 			false,
 		)
-		if err != nil {
-			// Silently ignore update check failures
-			return
-		}
-
-		updateInfoMu.Lock()
-		updateInfo = info
-		updateInfoMu.Unlock()
+		updateResult <- info
 	}()
+}
+
+// loadConfig loads the configuration and parses the output format.
+func loadConfig(cmd *cobra.Command) error {
+	var err error
+
+	// Parse output format
+	outFormat, err = output.ParseFormat(outputFormat)
+	if err != nil {
+		return err
+	}
+
+	// Store in exported package-level var for main.go error handling
+	OutputFormat = outputFormat
+
+	// Load config
+	cfg, err = config.Load()
+	if err != nil {
+		return fmt.Errorf("loading config: %w", err)
+	}
+
+	// If output format not set via flag, try config default
+	if outputFormat == "" && cfg.Defaults.Output != "" {
+		outFormat, err = output.ParseFormat(cfg.Defaults.Output)
+		if err != nil {
+			return err
+		}
+		OutputFormat = cfg.Defaults.Output
+	}
+
+	return nil
+}
+
+// resolveProfile resolves auth credentials from flags, env, and config.
+func resolveProfile(cmd *cobra.Command) (config.Profile, error) {
+	flags := config.FlagValues{
+		Server:      serverFlag,
+		User:        userFlag,
+		Token:       tokenFlag,
+		Insecure:    insecureFlag,
+		ServerSet:   cmd.Flags().Changed("server"),
+		UserSet:     cmd.Flags().Changed("user"),
+		TokenSet:    cmd.Flags().Changed("token"),
+		InsecureSet: cmd.Flags().Changed("insecure"),
+	}
+
+	profile, err := config.ResolveAuth(flags, os.LookupEnv, cfg, profileFlag)
+	if err != nil {
+		return config.Profile{}, fmt.Errorf("resolving auth: %w", err)
+	}
+
+	if profile.URL == "" {
+		return config.Profile{}, fmt.Errorf("Jenkins URL not configured. Run 'jenkins login' or set JENKINS_URL")
+	}
+
+	return profile, nil
+}
+
+// setupJenkinsClient creates the Jenkins API client from the resolved profile.
+func setupJenkinsClient(profile *config.Profile) error {
+	jenkinsClient = client.NewClient(*profile, verboseFlag)
+	return nil
+}
+
+// checkPermissions enforces read-only mode and no-input restrictions.
+func checkPermissions(cmd *cobra.Command, profile *config.Profile) error {
+	effectiveReadOnly := profile.ReadOnly
+	if cmd.Flags().Changed("read-only") {
+		effectiveReadOnly = readOnlyFlag
+	}
+	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
+		return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
+	}
+
+	return nil
+}
+
+// RootCmd returns the root cobra.Command for use in main.go.
+func RootCmd() *cobra.Command {
+	return rootCmd
 }
 
 // Execute runs the root command.
