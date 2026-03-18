@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -25,6 +26,8 @@ var (
 	noColorFlag  bool
 	verboseFlag  bool
 	readOnlyFlag bool
+	noInputFlag  bool
+	quietFlag    bool
 
 	// Shared state set during PersistentPreRunE
 	cfg           *config.Config
@@ -56,6 +59,18 @@ All list/get commands support -o json and -o yaml for machine-readable output.
 
 Use "jenkins <command> --help" for detailed information about any command.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Check env vars for --no-input and --quiet
+		if !noInputFlag {
+			if v, ok := os.LookupEnv("JENKINS_NO_INPUT"); ok && v != "" && v != "0" && v != "false" {
+				noInputFlag = true
+			}
+		}
+		if !quietFlag {
+			if v, ok := os.LookupEnv("JENKINS_QUIET"); ok && v != "" && v != "0" && v != "false" {
+				quietFlag = true
+			}
+		}
+
 		// Start background update check for commands that should show it
 		cmdName := cmd.Name()
 		if cmdName != "update" && cmdName != "version" {
@@ -114,7 +129,7 @@ Use "jenkins <command> --help" for detailed information about any command.`,
 			return fmt.Errorf("Jenkins URL not configured. Run 'jenkins login' or set JENKINS_URL")
 		}
 
-		jenkinsClient = client.NewClient(profile)
+		jenkinsClient = client.NewClient(profile, verboseFlag)
 
 		// Read-only enforcement: flag overrides profile config
 		effectiveReadOnly := profile.ReadOnly
@@ -178,7 +193,12 @@ func startBackgroundUpdateCheck() {
 // Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		statusCode := 0
+		var apiErr *client.APIError
+		if errors.As(err, &apiErr) {
+			statusCode = apiErr.StatusCode
+		}
+		output.WriteError(os.Stderr, outFormat, err, statusCode)
 		os.Exit(1)
 	}
 }
@@ -193,6 +213,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&noColorFlag, "no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose output")
 	rootCmd.PersistentFlags().BoolVar(&readOnlyFlag, "read-only", false, "Block write operations (safety mode for agents)")
+	rootCmd.PersistentFlags().BoolVar(&noInputFlag, "no-input", false, "Disable all interactive prompts (for CI/agent use)")
+	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Suppress informational output")
 
 	// Register all subcommands
 	rootCmd.AddCommand(newVersionCmd())

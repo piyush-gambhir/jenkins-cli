@@ -67,17 +67,23 @@ Examples:
 			}
 
 			if wait || follow {
-				fmt.Fprintf(os.Stdout, "Triggering build for %q and waiting...\n", jobPath)
+				if !quietFlag {
+					fmt.Fprintf(os.Stdout, "Triggering build for %q and waiting...\n", jobPath)
+				}
 				build, err := jenkinsClient.TriggerBuildAndWait(jobPath, paramMap, timeout)
 				if err != nil {
 					return fmt.Errorf("build failed: %w", err)
 				}
 
-				fmt.Fprintf(os.Stdout, "Build #%d completed: %s (duration: %s)\n",
-					build.Number, build.Result, client.FormatDuration(build.Duration))
+				if !quietFlag {
+					fmt.Fprintf(os.Stdout, "Build #%d completed: %s (duration: %s)\n",
+						build.Number, build.Result, client.FormatDuration(build.Duration))
+				}
 
 				if follow {
-					fmt.Fprintf(os.Stdout, "\n--- Console Output ---\n")
+					if !quietFlag {
+						fmt.Fprintf(os.Stdout, "\n--- Console Output ---\n")
+					}
 					log, err := jenkinsClient.GetBuildLog(jobPath, build.Number)
 					if err != nil {
 						return fmt.Errorf("getting build log: %w", err)
@@ -94,19 +100,25 @@ Examples:
 				return fmt.Errorf("triggering build: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Build triggered for %q.\n", jobPath)
-			if ql.QueueURL != "" {
-				fmt.Fprintf(os.Stdout, "Queue URL: %s\n", ql.QueueURL)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Build triggered for %q.\n", jobPath)
+				if ql.QueueURL != "" {
+					fmt.Fprintf(os.Stdout, "Queue URL: %s\n", ql.QueueURL)
+				}
 			}
 
 			if follow {
 				// Follow mode without wait: stream log for the new build
-				fmt.Fprintf(os.Stdout, "Waiting for build to start...\n")
+				if !quietFlag {
+					fmt.Fprintf(os.Stdout, "Waiting for build to start...\n")
+				}
 				buildRef, err := jenkinsClient.WaitForQueuedBuild(ql.QueueURL, timeout)
 				if err != nil {
 					return fmt.Errorf("waiting for build: %w", err)
 				}
-				fmt.Fprintf(os.Stdout, "Build #%d started. Streaming console...\n", buildRef.Number)
+				if !quietFlag {
+					fmt.Fprintf(os.Stdout, "Build #%d started. Streaming console...\n", buildRef.Number)
+				}
 				return jenkinsClient.StreamBuildLog(jobPath, buildRef.Number, os.Stdout)
 			}
 

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -17,7 +18,7 @@ func newPipelineValidateCmd() *cobra.Command {
 
 Sends the Jenkinsfile content to the Jenkins server for validation.
 Returns any syntax errors or "Jenkinsfile successfully validated" on
-success. The --from-file flag is required.
+success. The --from-file flag is required. Use "-" to read from stdin.
 
 Note: Only declarative pipelines can be validated. Scripted pipelines
 are not supported by this endpoint.
@@ -26,15 +27,21 @@ Examples:
   # Validate a Jenkinsfile
   jenkins pipeline validate --from-file Jenkinsfile
 
-  # Validate a Jenkinsfile at a custom path
-  jenkins pipeline validate -f ./ci/Jenkinsfile`,
+  # Validate from stdin
+  cat Jenkinsfile | jenkins pipeline validate --from-file -`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if fromFile == "" {
 				return fmt.Errorf("--from-file is required")
 			}
 
-			data, err := os.ReadFile(fromFile)
+			var data []byte
+			var err error
+			if fromFile == "-" {
+				data, err = io.ReadAll(os.Stdin)
+			} else {
+				data, err = os.ReadFile(fromFile)
+			}
 			if err != nil {
 				return fmt.Errorf("reading file %s: %w", fromFile, err)
 			}
@@ -49,7 +56,7 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVarP(&fromFile, "from-file", "f", "", "Path to Jenkinsfile (required)")
+	cmd.Flags().StringVarP(&fromFile, "from-file", "f", "", "Path to Jenkinsfile (required, use - for stdin)")
 
 	return cmd
 }

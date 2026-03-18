@@ -30,7 +30,9 @@ Examples:
 				return fmt.Errorf("enabling job: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Job %q enabled.\n", jobPath)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Job %q enabled.\n", jobPath)
+			}
 			return nil
 		},
 	}

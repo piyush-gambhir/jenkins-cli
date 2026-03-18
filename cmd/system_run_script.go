@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -19,7 +20,8 @@ func newSystemRunScriptCmd() *cobra.Command {
 
 Runs an arbitrary Groovy script on the Jenkins controller and prints
 the output. Provide the script inline via --script or from a file via
---from-file. One of the two is required.
+--from-file. One of the two is required. Use "-" as the file path to
+read from stdin.
 
 WARNING: Scripts run with full Jenkins controller access. Use with caution.
 
@@ -30,17 +32,20 @@ Examples:
   # Run a script from a file
   jenkins system run-script --from-file my-script.groovy
 
-  # Get system properties
-  jenkins system run-script --script 'System.getProperties().each { k, v -> println "$k=$v" }'
-
-  # List all jobs via Groovy
-  jenkins system run-script --script 'Jenkins.instance.allItems.each { println it.fullName }'`,
+  # Run a script from stdin
+  cat script.groovy | jenkins system run-script --from-file -`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var scriptContent string
 
 			if fromFile != "" {
-				data, err := os.ReadFile(fromFile)
+				var data []byte
+				var err error
+				if fromFile == "-" {
+					data, err = io.ReadAll(os.Stdin)
+				} else {
+					data, err = os.ReadFile(fromFile)
+				}
 				if err != nil {
 					return fmt.Errorf("reading script file %s: %w", fromFile, err)
 				}
@@ -61,7 +66,7 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVar(&fromFile, "from-file", "", "Path to Groovy script file")
+	cmd.Flags().StringVar(&fromFile, "from-file", "", "Path to Groovy script file (use - for stdin)")
 	cmd.Flags().StringVar(&script, "script", "", "Groovy script to execute")
 
 	return cmd

@@ -34,7 +34,9 @@ Examples:
 				return fmt.Errorf("copying job: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Job %q copied to %q successfully.\n", source, newName)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Job %q copied to %q successfully.\n", source, newName)
+			}
 			return nil
 		},
 	}

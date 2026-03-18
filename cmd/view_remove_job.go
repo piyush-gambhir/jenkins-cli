@@ -29,7 +29,9 @@ Examples:
 				return fmt.Errorf("removing job from view: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Job %q removed from view %q.\n", jobName, viewName)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Job %q removed from view %q.\n", jobName, viewName)
+			}
 			return nil
 		},
 	}

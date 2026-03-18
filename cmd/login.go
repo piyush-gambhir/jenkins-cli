@@ -34,6 +34,10 @@ Examples:
   jenkins login --name staging`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if noInputFlag {
+				return fmt.Errorf("interactive input required but --no-input is set. Use environment variables JENKINS_URL, JENKINS_USER, and JENKINS_TOKEN instead.")
+			}
+
 			reader := bufio.NewReader(os.Stdin)
 
 			// Prompt URL
@@ -78,14 +82,20 @@ Examples:
 				Insecure: insecureFlag,
 			}
 
-			fmt.Print("Testing connection... ")
+			if !quietFlag {
+				fmt.Print("Testing connection... ")
+			}
 			c := client.NewClient(profile)
 			user, err := c.WhoAmI()
 			if err != nil {
-				fmt.Println("FAILED")
+				if !quietFlag {
+					fmt.Println("FAILED")
+				}
 				return fmt.Errorf("connection test failed: %w", err)
 			}
-			fmt.Printf("OK (authenticated as %s)\n", user.FullName)
+			if !quietFlag {
+				fmt.Printf("OK (authenticated as %s)\n", user.FullName)
+			}
 
 			// Load config
 			cfg, err := config.Load()
@@ -103,7 +113,9 @@ Examples:
 				return fmt.Errorf("saving config: %w", err)
 			}
 
-			fmt.Printf("Profile %q saved to %s\n", profileName, config.ConfigPath())
+			if !quietFlag {
+				fmt.Printf("Profile %q saved to %s\n", profileName, config.ConfigPath())
+			}
 			return nil
 		},
 	}

@@ -31,6 +31,9 @@ Examples:
 			jobPath := args[0]
 
 			if !confirm {
+				if noInputFlag {
+					return fmt.Errorf("interactive input required but --no-input is set. Use --confirm for destructive operations.")
+				}
 				return fmt.Errorf("use --confirm to confirm wiping workspace for job %q", jobPath)
 			}
 
@@ -38,7 +41,9 @@ Examples:
 				return fmt.Errorf("wiping workspace: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Workspace for job %q wiped.\n", jobPath)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Workspace for job %q wiped.\n", jobPath)
+			}
 			return nil
 		},
 	}

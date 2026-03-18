@@ -7,11 +7,29 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/piyush-gambhir/jenkins-cli/internal/config"
 )
+
+// verboseTransport wraps an http.RoundTripper and logs request/response details to stderr.
+type verboseTransport struct {
+	transport http.RoundTripper
+}
+
+func (t *verboseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	start := time.Now()
+	fmt.Fprintf(os.Stderr, "--> %s %s\n", req.Method, req.URL)
+	resp, err := t.transport.RoundTrip(req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "<-- ERROR: %v (%v)\n", err, time.Since(start))
+		return resp, err
+	}
+	fmt.Fprintf(os.Stderr, "<-- %d %s (%v)\n", resp.StatusCode, resp.Status, time.Since(start))
+	return resp, err
+}
 
 // Client is a Jenkins API client.
 type Client struct {
@@ -24,11 +42,17 @@ type Client struct {
 }
 
 // NewClient creates a new Jenkins API client from a resolved profile.
-func NewClient(profile config.Profile) *Client {
+// When verbose is true, HTTP request/response details are logged to stderr.
+func NewClient(profile config.Profile, verbose ...bool) *Client {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: profile.Insecure,
 		},
+	}
+
+	var rt http.RoundTripper = transport
+	if len(verbose) > 0 && verbose[0] {
+		rt = &verboseTransport{transport: transport}
 	}
 
 	return &Client{
@@ -38,7 +62,7 @@ func NewClient(profile config.Profile) *Client {
 		insecure: profile.Insecure,
 		httpClient: &http.Client{
 			Timeout:   30 * time.Second,
-			Transport: transport,
+			Transport: rt,
 		},
 	}
 }

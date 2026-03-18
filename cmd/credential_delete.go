@@ -1,16 +1,20 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/piyush-gambhir/jenkins-cli/internal/client"
 )
 
 func newCredentialDeleteCmd() *cobra.Command {
 	var store string
 	var domain string
 	var confirm bool
+	var ifExists bool
 
 	cmd := &cobra.Command{
 		Use:         "delete <credential-id>",
@@ -28,20 +32,35 @@ Examples:
   jenkins credential delete my-cred-id --confirm
 
   # Delete from a specific store and domain
-  jenkins credential delete my-cred-id --store system --domain my-domain --confirm`,
+  jenkins credential delete my-cred-id --store system --domain my-domain --confirm
+
+  # Idempotent delete (no error if credential doesn't exist)
+  jenkins credential delete my-cred-id --confirm --if-exists`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]
 
 			if !confirm {
+				if noInputFlag {
+					return fmt.Errorf("interactive input required but --no-input is set. Use --confirm for destructive operations.")
+				}
 				return fmt.Errorf("use --confirm to confirm deletion of credential %q", id)
 			}
 
 			if err := jenkinsClient.DeleteCredential(store, domain, id); err != nil {
+				var apiErr *client.APIError
+				if ifExists && errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+					if !quietFlag {
+						fmt.Fprintf(os.Stdout, "Credential %q does not exist, skipping.\n", id)
+					}
+					return nil
+				}
 				return fmt.Errorf("deleting credential: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Credential %q deleted.\n", id)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Credential %q deleted.\n", id)
+			}
 			return nil
 		},
 	}
@@ -49,6 +68,7 @@ Examples:
 	cmd.Flags().StringVar(&store, "store", "system", "Credential store")
 	cmd.Flags().StringVar(&domain, "domain", "_", "Credential domain")
 	cmd.Flags().BoolVar(&confirm, "confirm", false, "Confirm deletion")
+	cmd.Flags().BoolVar(&ifExists, "if-exists", false, "Don't error if the credential doesn't exist")
 
 	return cmd
 }

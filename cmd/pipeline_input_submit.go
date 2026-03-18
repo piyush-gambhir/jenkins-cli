@@ -51,7 +51,9 @@ Examples:
 				return fmt.Errorf("submitting input: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Input %q submitted for build #%d.\n", inputID, number)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Input %q submitted for build #%d.\n", inputID, number)
+			}
 			return nil
 		},
 	}

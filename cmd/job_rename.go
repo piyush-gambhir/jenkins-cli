@@ -32,7 +32,9 @@ Examples:
 				return fmt.Errorf("renaming job: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Job %q renamed to %q successfully.\n", jobPath, newName)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Job %q renamed to %q successfully.\n", jobPath, newName)
+			}
 			return nil
 		},
 	}

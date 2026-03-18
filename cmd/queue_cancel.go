@@ -31,7 +31,9 @@ Examples:
 				return fmt.Errorf("cancelling queue item: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Queue item %d cancelled.\n", id)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Queue item %d cancelled.\n", id)
+			}
 			return nil
 		},
 	}

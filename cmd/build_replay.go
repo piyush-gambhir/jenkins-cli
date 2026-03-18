@@ -38,7 +38,9 @@ Examples:
 				return fmt.Errorf("replaying build: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Build #%d replay triggered.\n", number)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Build #%d replay triggered.\n", number)
+			}
 			return nil
 		},
 	}

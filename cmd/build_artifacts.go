@@ -50,7 +50,9 @@ Examples:
 			}
 
 			if len(artifacts) == 0 {
-				fmt.Fprintln(os.Stdout, "No artifacts found.")
+				if !quietFlag {
+					fmt.Fprintln(os.Stdout, "No artifacts found.")
+				}
 				return nil
 			}
 
@@ -70,7 +72,9 @@ Examples:
 					if err := os.WriteFile(outPath, data, 0o644); err != nil {
 						return fmt.Errorf("writing %s: %w", outPath, err)
 					}
-					fmt.Fprintf(os.Stdout, "Downloaded: %s\n", outPath)
+					if !quietFlag {
+						fmt.Fprintf(os.Stdout, "Downloaded: %s\n", outPath)
+					}
 				}
 				return nil
 			}

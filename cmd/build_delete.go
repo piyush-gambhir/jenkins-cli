@@ -36,6 +36,9 @@ Examples:
 			}
 
 			if !confirm {
+				if noInputFlag {
+					return fmt.Errorf("interactive input required but --no-input is set. Use --confirm for destructive operations.")
+				}
 				return fmt.Errorf("use --confirm to confirm deletion of build #%d", number)
 			}
 
@@ -43,7 +46,9 @@ Examples:
 				return fmt.Errorf("deleting build: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Build #%d deleted.\n", number)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Build #%d deleted.\n", number)
+			}
 			return nil
 		},
 	}

@@ -33,7 +33,9 @@ Examples:
 				return fmt.Errorf("disabling node: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Node %q taken offline.\n", name)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Node %q taken offline.\n", name)
+			}
 			return nil
 		},
 	}

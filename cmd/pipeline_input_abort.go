@@ -33,7 +33,9 @@ Examples:
 				return fmt.Errorf("aborting input: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Input %q aborted for build #%d.\n", inputID, number)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Input %q aborted for build #%d.\n", inputID, number)
+			}
 			return nil
 		},
 	}

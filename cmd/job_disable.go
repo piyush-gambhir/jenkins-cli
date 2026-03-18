@@ -31,7 +31,9 @@ Examples:
 				return fmt.Errorf("disabling job: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Job %q disabled.\n", jobPath)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Job %q disabled.\n", jobPath)
+			}
 			return nil
 		},
 	}

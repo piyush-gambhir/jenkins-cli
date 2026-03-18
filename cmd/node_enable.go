@@ -28,7 +28,9 @@ Examples:
 				return fmt.Errorf("enabling node: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Node %q brought online.\n", name)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Node %q brought online.\n", name)
+			}
 			return nil
 		},
 	}

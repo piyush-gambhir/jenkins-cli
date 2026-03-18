@@ -29,6 +29,9 @@ Examples:
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !confirm {
+				if noInputFlag {
+					return fmt.Errorf("interactive input required but --no-input is set. Use --confirm for destructive operations.")
+				}
 				return fmt.Errorf("use --confirm to confirm restarting Jenkins")
 			}
 
@@ -36,12 +39,16 @@ Examples:
 				if err := jenkinsClient.SafeRestart(); err != nil {
 					return fmt.Errorf("safe restarting: %w", err)
 				}
-				fmt.Fprintln(os.Stdout, "Jenkins safe restart initiated. Waiting for running builds to complete.")
+				if !quietFlag {
+					fmt.Fprintln(os.Stdout, "Jenkins safe restart initiated. Waiting for running builds to complete.")
+				}
 			} else {
 				if err := jenkinsClient.Restart(); err != nil {
 					return fmt.Errorf("restarting: %w", err)
 				}
-				fmt.Fprintln(os.Stdout, "Jenkins restart initiated.")
+				if !quietFlag {
+					fmt.Fprintln(os.Stdout, "Jenkins restart initiated.")
+				}
 			}
 
 			return nil

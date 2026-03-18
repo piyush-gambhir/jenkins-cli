@@ -37,7 +37,9 @@ Examples:
 				return fmt.Errorf("stopping build: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Build #%d stopped.\n", number)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Build #%d stopped.\n", number)
+			}
 			return nil
 		},
 	}

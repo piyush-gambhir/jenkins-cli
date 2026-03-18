@@ -27,7 +27,9 @@ Examples:
 				return fmt.Errorf("quieting down: %w", err)
 			}
 
-			fmt.Fprintln(os.Stdout, "Jenkins is now in quiet-down mode. No new builds will start.")
+			if !quietFlag {
+				fmt.Fprintln(os.Stdout, "Jenkins is now in quiet-down mode. No new builds will start.")
+			}
 			return nil
 		},
 	}

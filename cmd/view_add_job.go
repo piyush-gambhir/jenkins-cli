@@ -32,7 +32,9 @@ Examples:
 				return fmt.Errorf("adding job to view: %w", err)
 			}
 
-			fmt.Fprintf(os.Stdout, "Job %q added to view %q.\n", jobName, viewName)
+			if !quietFlag {
+				fmt.Fprintf(os.Stdout, "Job %q added to view %q.\n", jobName, viewName)
+			}
 			return nil
 		},
 	}
