@@ -9,8 +9,9 @@ import (
 
 func newSystemQuietDownCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "quiet-down",
-		Short: "Put Jenkins into quiet-down mode",
+		Use:         "quiet-down",
+		Short:       "Put Jenkins into quiet-down mode",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Put Jenkins into quiet-down mode. No new builds will be started.
 
 In quiet-down mode, Jenkins will not start any new builds. Builds

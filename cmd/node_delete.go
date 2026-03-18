@@ -11,8 +11,9 @@ func newNodeDeleteCmd() *cobra.Command {
 	var confirm bool
 
 	cmd := &cobra.Command{
-		Use:   "delete <node-name>",
-		Short: "Delete a node",
+		Use:         "delete <node-name>",
+		Short:       "Delete a node",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Permanently delete a Jenkins node/agent.
 
 WARNING: This operation is irreversible. Requires --confirm.

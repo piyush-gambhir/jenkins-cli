@@ -13,8 +13,9 @@ func newNodeCreateCmd() *cobra.Command {
 	var labels string
 
 	cmd := &cobra.Command{
-		Use:   "create <node-name>",
-		Short: "Create a new node",
+		Use:         "create <node-name>",
+		Short:       "Create a new node",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Create a new permanent agent node in Jenkins.
 
 Creates a JNLP (Java Web Start) permanent agent. The --remote-fs flag

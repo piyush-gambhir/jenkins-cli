@@ -13,6 +13,7 @@ type Profile struct {
 	Username string `yaml:"username"`
 	Token    string `yaml:"token"`
 	Insecure bool   `yaml:"insecure,omitempty"`
+	ReadOnly bool   `yaml:"read_only,omitempty"`
 }
 
 // Defaults holds default settings.

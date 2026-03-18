@@ -9,8 +9,9 @@ import (
 
 func newJobRenameCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "rename <job-path> <new-name>",
-		Short: "Rename a job",
+		Use:         "rename <job-path> <new-name>",
+		Short:       "Rename a job",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Rename an existing Jenkins job.
 
 This changes the job's name while keeping all other configuration,

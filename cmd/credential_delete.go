@@ -13,8 +13,9 @@ func newCredentialDeleteCmd() *cobra.Command {
 	var confirm bool
 
 	cmd := &cobra.Command{
-		Use:   "delete <credential-id>",
-		Short: "Delete a credential",
+		Use:         "delete <credential-id>",
+		Short:       "Delete a credential",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Delete a Jenkins credential.
 
 Permanently removes a credential from the specified store and domain.

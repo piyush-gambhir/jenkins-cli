@@ -11,8 +11,9 @@ func newJobDeleteCmd() *cobra.Command {
 	var confirm bool
 
 	cmd := &cobra.Command{
-		Use:   "delete <job-path>",
-		Short: "Delete a job",
+		Use:         "delete <job-path>",
+		Short:       "Delete a job",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Permanently delete a Jenkins job. Use --confirm to skip the confirmation prompt.
 
 WARNING: This operation is irreversible. The job and all its build

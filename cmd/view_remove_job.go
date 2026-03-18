@@ -9,8 +9,9 @@ import (
 
 func newViewRemoveJobCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove-job <view-name> <job-name>",
-		Short: "Remove a job from a view",
+		Use:         "remove-job <view-name> <job-name>",
+		Short:       "Remove a job from a view",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Remove a job from a Jenkins view.
 
 Removes the job association from the view. The job itself is not

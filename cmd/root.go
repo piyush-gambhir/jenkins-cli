@@ -24,6 +24,7 @@ var (
 	insecureFlag bool
 	noColorFlag  bool
 	verboseFlag  bool
+	readOnlyFlag bool
 
 	// Shared state set during PersistentPreRunE
 	cfg           *config.Config
@@ -114,6 +115,16 @@ Use "jenkins <command> --help" for detailed information about any command.`,
 		}
 
 		jenkinsClient = client.NewClient(profile)
+
+		// Read-only enforcement: flag overrides profile config
+		effectiveReadOnly := profile.ReadOnly
+		if cmd.Flags().Changed("read-only") {
+			effectiveReadOnly = readOnlyFlag
+		}
+		if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
+			return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
+		}
+
 		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
@@ -181,6 +192,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&insecureFlag, "insecure", "k", false, "Skip TLS verification")
 	rootCmd.PersistentFlags().BoolVar(&noColorFlag, "no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose output")
+	rootCmd.PersistentFlags().BoolVar(&readOnlyFlag, "read-only", false, "Block write operations (safety mode for agents)")
 
 	// Register all subcommands
 	rootCmd.AddCommand(newVersionCmd())

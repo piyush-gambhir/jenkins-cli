@@ -54,6 +54,12 @@ func ResolveAuth(flags FlagValues, envLookup EnvLookupFunc, cfg *Config, profile
 				base.Insecure = b
 			}
 		}
+		if v, ok := envLookup("JENKINS_READ_ONLY"); ok && v != "" {
+			b, err := strconv.ParseBool(v)
+			if err == nil {
+				base.ReadOnly = b
+			}
+		}
 	}
 
 	// Layer flags (highest priority)

@@ -12,8 +12,9 @@ func newSystemRunScriptCmd() *cobra.Command {
 	var script string
 
 	cmd := &cobra.Command{
-		Use:   "run-script",
-		Short: "Execute a Groovy script",
+		Use:         "run-script",
+		Short:       "Execute a Groovy script",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Execute a Groovy script on the Jenkins controller via the script console.
 
 Runs an arbitrary Groovy script on the Jenkins controller and prints

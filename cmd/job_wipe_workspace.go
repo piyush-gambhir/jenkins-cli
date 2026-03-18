@@ -11,8 +11,9 @@ func newJobWipeWorkspaceCmd() *cobra.Command {
 	var confirm bool
 
 	cmd := &cobra.Command{
-		Use:   "wipe-workspace <job-path>",
-		Short: "Wipe job workspace",
+		Use:         "wipe-workspace <job-path>",
+		Short:       "Wipe job workspace",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Wipe the workspace directory of a Jenkins job.
 
 Deletes the contents of the job's workspace on the controller. This is

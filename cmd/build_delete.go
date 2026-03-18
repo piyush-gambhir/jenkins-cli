@@ -13,8 +13,9 @@ func newBuildDeleteCmd() *cobra.Command {
 	var confirm bool
 
 	cmd := &cobra.Command{
-		Use:   "delete <job-path> <build-number>",
-		Short: "Delete a build",
+		Use:         "delete <job-path> <build-number>",
+		Short:       "Delete a build",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Permanently delete a build record.
 
 WARNING: This operation is irreversible. The build record, console log,

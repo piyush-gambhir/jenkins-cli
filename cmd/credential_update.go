@@ -13,8 +13,9 @@ func newCredentialUpdateCmd() *cobra.Command {
 	var fromFile string
 
 	cmd := &cobra.Command{
-		Use:   "update <credential-id>",
-		Short: "Update a credential",
+		Use:         "update <credential-id>",
+		Short:       "Update a credential",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Update an existing credential from an XML configuration file.
 
 The --from-file flag is required. This replaces the credential's entire

@@ -11,8 +11,9 @@ func newViewDeleteCmd() *cobra.Command {
 	var confirm bool
 
 	cmd := &cobra.Command{
-		Use:   "delete <view-name>",
-		Short: "Delete a view",
+		Use:         "delete <view-name>",
+		Short:       "Delete a view",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Delete a Jenkins view.
 
 Removes the view from the Jenkins dashboard. This does not delete the

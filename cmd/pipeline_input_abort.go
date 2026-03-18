@@ -9,8 +9,9 @@ import (
 
 func newPipelineInputAbortCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "input-abort <job-path> <build-number> <input-id>",
-		Short: "Abort a pipeline input",
+		Use:         "input-abort <job-path> <build-number> <input-id>",
+		Short:       "Abort a pipeline input",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Abort a pending pipeline input action.
 
 Rejects the input step, which causes the pipeline to proceed down the

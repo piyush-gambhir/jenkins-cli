@@ -9,8 +9,9 @@ import (
 
 func newViewAddJobCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "add-job <view-name> <job-name>",
-		Short: "Add a job to a view",
+		Use:         "add-job <view-name> <job-name>",
+		Short:       "Add a job to a view",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Add an existing job to a Jenkins view.
 
 The job must already exist. This simply associates it with the view

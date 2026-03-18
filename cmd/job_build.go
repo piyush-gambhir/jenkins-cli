@@ -18,8 +18,9 @@ func newJobBuildCmd() *cobra.Command {
 	var timeout time.Duration
 
 	cmd := &cobra.Command{
-		Use:   "build <job-path>",
-		Short: "Trigger a build",
+		Use:         "build <job-path>",
+		Short:       "Trigger a build",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Trigger a build for a Jenkins job. Optionally wait for completion or follow the console log.
 
 Use --param to pass build parameters (repeatable). Use --wait to block

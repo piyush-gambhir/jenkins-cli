@@ -12,8 +12,9 @@ func newPipelineInputSubmitCmd() *cobra.Command {
 	var params []string
 
 	cmd := &cobra.Command{
-		Use:   "input-submit <job-path> <build-number> <input-id>",
-		Short: "Submit a pipeline input",
+		Use:         "input-submit <job-path> <build-number> <input-id>",
+		Short:       "Submit a pipeline input",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Proceed with a pending pipeline input action, optionally providing parameters.
 
 Use "jenkins pipeline input-list" to find the input ID, then submit it

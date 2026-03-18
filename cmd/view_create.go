@@ -11,8 +11,9 @@ func newViewCreateCmd() *cobra.Command {
 	var viewType string
 
 	cmd := &cobra.Command{
-		Use:   "create <view-name>",
-		Short: "Create a new view",
+		Use:         "create <view-name>",
+		Short:       "Create a new view",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Create a new Jenkins view.
 
 Creates an empty view. Use --type to specify the view type class name.

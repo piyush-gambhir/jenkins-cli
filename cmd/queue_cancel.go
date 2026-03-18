@@ -9,8 +9,9 @@ import (
 
 func newQueueCancelCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "cancel <queue-id>",
-		Short: "Cancel a queued item",
+		Use:         "cancel <queue-id>",
+		Short:       "Cancel a queued item",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Cancel a pending build in the queue by its ID.
 
 Use "jenkins queue list" to find the queue item ID, then pass it to

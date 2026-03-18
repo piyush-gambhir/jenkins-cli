@@ -9,8 +9,9 @@ import (
 
 func newJobDisableCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "disable <job-path>",
-		Short: "Disable a job",
+		Use:         "disable <job-path>",
+		Short:       "Disable a job",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Disable a Jenkins job so it cannot be built.
 
 A disabled job cannot be triggered manually or by SCM changes. Use

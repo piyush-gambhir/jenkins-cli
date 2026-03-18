@@ -13,8 +13,9 @@ func newJobCreateCmd() *cobra.Command {
 	var folder string
 
 	cmd := &cobra.Command{
-		Use:   "create <job-name>",
-		Short: "Create a new job",
+		Use:         "create <job-name>",
+		Short:       "Create a new job",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Create a new Jenkins job from an XML configuration file.
 
 The --from-file flag is required and must point to a valid Jenkins

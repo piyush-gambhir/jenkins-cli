@@ -11,8 +11,9 @@ import (
 
 func newBuildReplayCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "replay <job-path> <build-number>",
-		Short: "Replay a pipeline build",
+		Use:         "replay <job-path> <build-number>",
+		Short:       "Replay a pipeline build",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Replay a pipeline build, re-running it with the same pipeline script.
 
 Triggers a new build using the same Jenkinsfile/pipeline script that was

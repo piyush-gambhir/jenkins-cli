@@ -11,8 +11,9 @@ func newPluginUninstallCmd() *cobra.Command {
 	var confirm bool
 
 	cmd := &cobra.Command{
-		Use:   "uninstall <plugin-name>",
-		Short: "Uninstall a plugin",
+		Use:         "uninstall <plugin-name>",
+		Short:       "Uninstall a plugin",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Uninstall a Jenkins plugin. A restart will be required.
 
 Marks the plugin for removal. Jenkins must be restarted for the change

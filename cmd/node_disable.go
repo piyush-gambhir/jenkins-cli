@@ -11,8 +11,9 @@ func newNodeDisableCmd() *cobra.Command {
 	var message string
 
 	cmd := &cobra.Command{
-		Use:   "disable <node-name>",
-		Short: "Take a node offline",
+		Use:         "disable <node-name>",
+		Short:       "Take a node offline",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Take a Jenkins node offline with an optional message.
 
 Marks a node as temporarily offline. No new builds will be assigned to

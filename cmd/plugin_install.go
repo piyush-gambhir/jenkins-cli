@@ -11,8 +11,9 @@ func newPluginInstallCmd() *cobra.Command {
 	var version string
 
 	cmd := &cobra.Command{
-		Use:   "install <plugin-name>",
-		Short: "Install a plugin",
+		Use:         "install <plugin-name>",
+		Short:       "Install a plugin",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Install a Jenkins plugin by name. Optionally specify a version.
 
 Initiates plugin installation on the Jenkins server. A restart may be

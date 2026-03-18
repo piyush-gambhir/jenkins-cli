@@ -9,8 +9,9 @@ import (
 
 func newNodeEnableCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "enable <node-name>",
-		Short: "Bring a node online",
+		Use:         "enable <node-name>",
+		Short:       "Bring a node online",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Bring an offline Jenkins node back online.
 
 Toggles a temporarily offline node back to online status so it can

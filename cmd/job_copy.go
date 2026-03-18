@@ -11,8 +11,9 @@ func newJobCopyCmd() *cobra.Command {
 	var folder string
 
 	cmd := &cobra.Command{
-		Use:   "copy <source-job> <new-name>",
-		Short: "Copy a job",
+		Use:         "copy <source-job> <new-name>",
+		Short:       "Copy a job",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Create a copy of an existing Jenkins job with a new name.
 
 Copies the source job's entire configuration to a new job. Use --folder

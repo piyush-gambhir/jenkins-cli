@@ -13,8 +13,9 @@ func newCredentialCreateCmd() *cobra.Command {
 	var fromFile string
 
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a credential",
+		Use:         "create",
+		Short:       "Create a credential",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Create a new credential from an XML configuration file.
 
 The --from-file flag is required and must point to a valid Jenkins

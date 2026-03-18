@@ -9,8 +9,9 @@ import (
 
 func newJobEnableCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "enable <job-path>",
-		Short: "Enable a job",
+		Use:         "enable <job-path>",
+		Short:       "Enable a job",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Enable a disabled Jenkins job.
 
 Re-enables a job that was previously disabled so it can be built again.

@@ -11,8 +11,9 @@ func newJobUpdateCmd() *cobra.Command {
 	var fromFile string
 
 	cmd := &cobra.Command{
-		Use:   "update <job-path>",
-		Short: "Update job configuration",
+		Use:         "update <job-path>",
+		Short:       "Update job configuration",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Update a Jenkins job's config.xml with a new XML configuration.
 
 The --from-file flag is required. This replaces the entire config.xml

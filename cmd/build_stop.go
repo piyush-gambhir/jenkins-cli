@@ -11,8 +11,9 @@ import (
 
 func newBuildStopCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "stop <job-path> <build-number>",
-		Short: "Stop a running build",
+		Use:         "stop <job-path> <build-number>",
+		Short:       "Stop a running build",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Stop a currently running build.
 
 Sends a stop signal to the specified build. The build will be marked
