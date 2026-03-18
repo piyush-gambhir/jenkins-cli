@@ -4,6 +4,20 @@ A command-line interface for managing Jenkins CI/CD servers -- jobs, builds, nod
 
 Designed for both human operators and coding agents (LLMs). All list and get commands support `-o json` and `-o yaml` for machine-readable output.
 
+[![Go Version](https://img.shields.io/github/go-mod/go-version/piyush-gambhir/jenkins-cli)](https://go.dev/)
+[![Release](https://img.shields.io/github/v/release/piyush-gambhir/jenkins-cli)](https://github.com/piyush-gambhir/jenkins-cli/releases)
+[![License](https://img.shields.io/github/license/piyush-gambhir/jenkins-cli)](LICENSE)
+[![CI](https://github.com/piyush-gambhir/jenkins-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/piyush-gambhir/jenkins-cli/actions/workflows/ci.yml)
+
+## Features
+
+- Full API coverage — every Jenkins API endpoint accessible from the command line
+- Multiple output formats — table, JSON, YAML (`-o json`)
+- Profile management — multiple instances with `--profile`
+- Auto-update — checks for new versions, `jenkins update` to self-update
+- Agent-friendly — comprehensive help text, structured output for LLM coding agents
+- Cross-platform — macOS, Linux, Windows (amd64 and arm64)
+
 ## Installation
 
 ### From Source
@@ -30,6 +44,20 @@ curl -sSL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/inst
 ### From GitHub Releases
 
 Download the latest binary for your platform from [GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and place it in your `PATH`.
+
+## Quick Start
+
+```bash
+# Install
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh
+
+# Authenticate
+jenkins login
+
+# Start using
+jenkins job list
+jenkins job get <job-path> -o json
+```
 
 ## Authentication
 
@@ -1104,6 +1132,20 @@ jenkins pipeline input-list my-pipeline 42
 # Submit approval
 jenkins pipeline input-submit my-pipeline 42 deploy-approval --param ENV=production
 ```
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Agent Skills
+
+This CLI ships with an agent skill for coding agents (Claude, Cursor, Copilot, etc.):
+
+```bash
+npx skills add piyush-gambhir/jenkins-cli@jenkins
+```
+
+Once installed, coding agents automatically know how to use this CLI effectively.
 
 ## License
 
