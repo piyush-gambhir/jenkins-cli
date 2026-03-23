@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"strings"
@@ -89,6 +90,8 @@ func NewClient(profile config.Profile, verbose ...bool) *Client {
 		rt = &verboseTransport{transport: transport}
 	}
 
+	jar, _ := cookiejar.New(nil)
+
 	return &Client{
 		baseURL:  strings.TrimRight(profile.URL, "/"),
 		username: profile.Username,
@@ -97,6 +100,7 @@ func NewClient(profile config.Profile, verbose ...bool) *Client {
 		httpClient: &http.Client{
 			Timeout:   30 * time.Second,
 			Transport: rt,
+			Jar:       jar,
 		},
 	}
 }

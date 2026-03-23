@@ -19,7 +19,7 @@ type ServerInfo struct {
 	URL             string `json:"url"`
 	Views           []View `json:"views"`
 	PrimaryView     *View  `json:"primaryView"`
-	Slaved          bool   `json:"slaveAgentPort,omitempty"`
+	SlaveAgentPort  int    `json:"slaveAgentPort,omitempty"`
 }
 
 // GetServerInfo gets Jenkins server information.
