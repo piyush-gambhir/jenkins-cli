@@ -29,7 +29,7 @@ Examples:
 
   # View stages for a job in a folder
   jenkins build stages my-folder/my-pipeline 10`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			number, err := parseNumber(args[1])

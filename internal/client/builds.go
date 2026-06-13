@@ -16,21 +16,24 @@ import (
 
 // Build represents a Jenkins build.
 type Build struct {
-	Number          int             `json:"number"`
-	URL             string          `json:"url"`
-	Result          string          `json:"result"`
-	Building        bool            `json:"building"`
-	Timestamp       int64           `json:"timestamp"`
-	Duration        int64           `json:"duration"`
-	EstimatedDuration int64         `json:"estimatedDuration"`
-	DisplayName     string          `json:"displayName"`
-	Description     string          `json:"description"`
-	FullDisplayName string          `json:"fullDisplayName"`
-	ID              string          `json:"id"`
-	QueueID         int             `json:"queueId"`
-	Artifacts       []Artifact      `json:"artifacts"`
-	Actions         []json.RawMessage `json:"actions"`
-	ChangeSet       *ChangeSet      `json:"changeSet"`
+	Number            int               `json:"number"`
+	URL               string            `json:"url"`
+	Result            string            `json:"result"`
+	Building          bool              `json:"building"`
+	Timestamp         int64             `json:"timestamp"`
+	Duration          int64             `json:"duration"`
+	EstimatedDuration int64             `json:"estimatedDuration"`
+	DisplayName       string            `json:"displayName"`
+	Description       string            `json:"description"`
+	FullDisplayName   string            `json:"fullDisplayName"`
+	ID                string            `json:"id"`
+	QueueID           int               `json:"queueId"`
+	Artifacts         []Artifact        `json:"artifacts"`
+	Actions           []json.RawMessage `json:"actions"`
+	// ChangeSet is populated for freestyle (AbstractBuild) builds;
+	// pipeline (WorkflowRun) builds expose ChangeSets instead.
+	ChangeSet  *ChangeSet  `json:"changeSet,omitempty"`
+	ChangeSets []ChangeSet `json:"changeSets,omitempty"`
 }
 
 // Artifact represents a build artifact.
@@ -112,12 +115,12 @@ type PipelineStage struct {
 
 // PipelineRun represents a pipeline wfapi run.
 type PipelineRun struct {
-	ID                  string          `json:"id"`
-	Name                string          `json:"name"`
-	Status              string          `json:"status"`
-	StartTimeMillis     int64           `json:"startTimeMillis"`
-	DurationMillis      int64           `json:"durationMillis"`
-	Stages              []PipelineStage `json:"stages"`
+	ID              string          `json:"id"`
+	Name            string          `json:"name"`
+	Status          string          `json:"status"`
+	StartTimeMillis int64           `json:"startTimeMillis"`
+	DurationMillis  int64           `json:"durationMillis"`
+	Stages          []PipelineStage `json:"stages"`
 }
 
 // ListBuilds lists builds for a job.

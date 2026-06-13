@@ -53,7 +53,7 @@ Examples:
 
   # Build a job inside a folder
   jenkins job build my-folder/my-pipeline --param VERSION=1.2.3`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 

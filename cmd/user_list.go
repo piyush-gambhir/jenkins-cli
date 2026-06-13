@@ -24,7 +24,7 @@ Examples:
 
   # Output as JSON
   jenkins user list -o json`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			users, err := jenkinsClient.ListUsers()
 			if err != nil {

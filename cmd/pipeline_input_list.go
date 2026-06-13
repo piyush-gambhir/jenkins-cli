@@ -26,7 +26,7 @@ Examples:
 
   # Output as JSON
   jenkins pipeline input-list my-pipeline 42 -o json`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			number, err := parseNumber(args[1])

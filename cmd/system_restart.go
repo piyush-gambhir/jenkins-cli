@@ -26,7 +26,7 @@ Examples:
 
   # Safe restart (wait for builds to finish)
   jenkins system restart --safe --confirm`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !confirm {
 				if noInputFlag {

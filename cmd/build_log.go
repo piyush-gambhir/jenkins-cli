@@ -34,7 +34,7 @@ Examples:
 
   # Pipe log output to a file
   jenkins build log my-pipeline 42 > build-42.log`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			number, err := client.ParseBuildNumber(args[1])

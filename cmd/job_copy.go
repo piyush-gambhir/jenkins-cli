@@ -25,7 +25,7 @@ Examples:
 
   # Copy a job within a folder
   jenkins job copy my-pipeline new-pipeline --folder my-folder`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			source := args[0]
 			newName := args[1]

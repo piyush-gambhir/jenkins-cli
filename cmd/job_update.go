@@ -29,7 +29,7 @@ Examples:
 
   # Update a job in a folder
   jenkins job update my-folder/my-pipeline --from-file config.xml`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 

@@ -8,11 +8,11 @@ import (
 
 // Credential represents a Jenkins credential.
 type Credential struct {
-	ID          string `json:"id"`
-	TypeName    string `json:"typeName"`
-	DisplayName string `json:"displayName"`
-	Description string `json:"description"`
-	Domain      string `json:"domain,omitempty"`
+	ID          string                 `json:"id"`
+	TypeName    string                 `json:"typeName"`
+	DisplayName string                 `json:"displayName"`
+	Description string                 `json:"description"`
+	Domain      string                 `json:"domain,omitempty"`
 	Fingerprint *CredentialFingerprint `json:"fingerprint,omitempty"`
 }
 
@@ -23,7 +23,7 @@ type CredentialFingerprint struct {
 
 // CredentialUsage represents where a credential is used.
 type CredentialUsage struct {
-	Name   string `json:"name"`
+	Name   string          `json:"name"`
 	Ranges json.RawMessage `json:"ranges"`
 }
 

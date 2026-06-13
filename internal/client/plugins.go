@@ -8,16 +8,16 @@ import (
 
 // Plugin represents a Jenkins plugin.
 type Plugin struct {
-	ShortName       string           `json:"shortName"`
-	LongName        string           `json:"longName"`
-	Version         string           `json:"version"`
-	URL             string           `json:"url"`
-	Active          bool             `json:"active"`
-	Enabled         bool             `json:"enabled"`
-	HasUpdate       bool             `json:"hasUpdate"`
-	Pinned          bool             `json:"pinned"`
-	Dependencies    []PluginDep      `json:"dependencies"`
-	BackupVersion   string           `json:"backupVersion"`
+	ShortName     string      `json:"shortName"`
+	LongName      string      `json:"longName"`
+	Version       string      `json:"version"`
+	URL           string      `json:"url"`
+	Active        bool        `json:"active"`
+	Enabled       bool        `json:"enabled"`
+	HasUpdate     bool        `json:"hasUpdate"`
+	Pinned        bool        `json:"pinned"`
+	Dependencies  []PluginDep `json:"dependencies"`
+	BackupVersion string      `json:"backupVersion"`
 }
 
 // PluginDep represents a plugin dependency.
@@ -40,8 +40,16 @@ type PluginInstallStatus struct {
 }
 
 // UpdateCenter represents update center info.
+// Update center entries identify plugins via "name" (not "shortName" as in
+// the pluginManager API), and "version" is the version available for update.
 type UpdateCenter struct {
-	AvailableUpdates []Plugin `json:"updates"`
+	AvailableUpdates []UpdateCenterPlugin `json:"updates"`
+}
+
+// UpdateCenterPlugin is a plugin entry from the update center.
+type UpdateCenterPlugin struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
 }
 
 // ListPlugins lists all installed plugins.
@@ -131,5 +139,13 @@ func (c *Client) CheckPluginUpdates() ([]Plugin, error) {
 		return nil, fmt.Errorf("parsing update center: %w", err)
 	}
 
-	return uc.AvailableUpdates, nil
+	updates := make([]Plugin, 0, len(uc.AvailableUpdates))
+	for _, u := range uc.AvailableUpdates {
+		updates = append(updates, Plugin{
+			ShortName: u.Name,
+			Version:   u.Version,
+			HasUpdate: true,
+		})
+	}
+	return updates, nil
 }

@@ -8,16 +8,16 @@ import (
 
 // QueueItem represents an item in the Jenkins build queue.
 type QueueItem struct {
-	ID         int            `json:"id"`
-	Task       QueueTask      `json:"task"`
-	Why        string         `json:"why"`
-	Blocked    bool           `json:"blocked"`
-	Buildable  bool           `json:"buildable"`
-	Stuck      bool           `json:"stuck"`
-	Cancelled  bool           `json:"cancelled"`
-	InQueueSince int64        `json:"inQueueSince"`
-	Executable QueueExecutable `json:"executable"`
-	Actions    []json.RawMessage `json:"actions"`
+	ID           int               `json:"id"`
+	Task         QueueTask         `json:"task"`
+	Why          string            `json:"why"`
+	Blocked      bool              `json:"blocked"`
+	Buildable    bool              `json:"buildable"`
+	Stuck        bool              `json:"stuck"`
+	Cancelled    bool              `json:"cancelled"`
+	InQueueSince int64             `json:"inQueueSince"`
+	Executable   QueueExecutable   `json:"executable"`
+	Actions      []json.RawMessage `json:"actions"`
 }
 
 // QueueTask represents the task associated with a queue item.

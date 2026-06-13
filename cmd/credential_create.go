@@ -45,7 +45,7 @@ Examples:
 
   # Idempotent create (no error if credential already exists)
   jenkins credential create --from-file cred.xml --if-not-exists`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if fromFile == "" {
 				return fmt.Errorf("--from-file is required")

@@ -34,7 +34,7 @@ Examples:
 
   # Output as YAML
   jenkins job get my-pipeline -o yaml`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 

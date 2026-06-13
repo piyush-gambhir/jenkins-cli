@@ -29,7 +29,7 @@ Examples:
 
   # Validate from stdin
   cat Jenkinsfile | jenkins pipeline validate --from-file -`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if fromFile == "" {
 				return fmt.Errorf("--from-file is required")

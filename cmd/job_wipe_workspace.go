@@ -26,7 +26,7 @@ Examples:
 
   # Wipe workspace for a job in a folder
   jenkins job wipe-workspace my-folder/my-pipeline --confirm`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 

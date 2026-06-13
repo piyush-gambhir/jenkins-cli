@@ -20,7 +20,7 @@ abort path (or fail, depending on how the Jenkinsfile handles it).
 Examples:
   # Abort a pending input
   jenkins pipeline input-abort my-pipeline 42 my-input-id`,
-		Args:  cobra.ExactArgs(3),
+		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			number, err := parseNumber(args[1])

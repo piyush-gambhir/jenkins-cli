@@ -25,7 +25,7 @@ Examples:
 
   # Output as JSON
   jenkins view get "All" -o json`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 

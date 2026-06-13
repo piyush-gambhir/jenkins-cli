@@ -20,7 +20,7 @@ deleted -- it simply no longer appears in this view.
 Examples:
   # Remove a job from a view
   jenkins view remove-job "My View" my-pipeline`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			viewName := args[0]
 			jobName := args[1]

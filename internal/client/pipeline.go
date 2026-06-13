@@ -10,22 +10,25 @@ import (
 
 // PipelineInput represents a pending pipeline input.
 type PipelineInput struct {
-	ID          string             `json:"id"`
-	Message     string             `json:"message"`
-	ProceedText string             `json:"proceedText"`
-	AbortText   string             `json:"abortText"`
+	ID          string               `json:"id"`
+	Message     string               `json:"message"`
+	ProceedText string               `json:"proceedText"`
+	AbortText   string               `json:"abortText"`
 	Inputs      []PipelineInputParam `json:"inputs"`
-	ProceedURL  string             `json:"proceedUrl"`
-	AbortURL    string             `json:"abortUrl"`
-	RedirectURL string             `json:"redirectApprovalUrl"`
+	ProceedURL  string               `json:"proceedUrl"`
+	AbortURL    string               `json:"abortUrl"`
+	RedirectURL string               `json:"redirectApprovalUrl"`
 }
 
 // PipelineInputParam represents an input parameter.
 type PipelineInputParam struct {
-	Name         string `json:"name"`
-	Type         string `json:"type"`
-	DefaultValue string `json:"defaultParameterValue"`
-	Description  string `json:"description"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	// DefaultValue is an object in the Jenkins API (e.g.
+	// {"_class":"hudson.model.StringParameterValue","name":"X","value":"y"}),
+	// null, or absent — so it must not be typed as string.
+	DefaultValue interface{} `json:"defaultParameterValue"`
+	Description  string      `json:"description"`
 }
 
 // PipelineInputResponse wraps a list of pending inputs.

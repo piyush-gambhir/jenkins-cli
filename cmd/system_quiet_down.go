@@ -21,7 +21,7 @@ restart or maintenance window.
 Examples:
   # Enter quiet-down mode
   jenkins system quiet-down`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := jenkinsClient.QuietDown(); err != nil {
 				return fmt.Errorf("quieting down: %w", err)

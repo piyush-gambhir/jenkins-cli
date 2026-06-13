@@ -65,9 +65,18 @@ Examples:
 						fmt.Fprintf(os.Stdout, "    - %s\n", a.FileName)
 					}
 				}
-				if build.ChangeSet != nil && len(build.ChangeSet.Items) > 0 {
-					fmt.Fprintf(os.Stdout, "  Changes:      %d\n", len(build.ChangeSet.Items))
-					for _, c := range build.ChangeSet.Items {
+				// Freestyle builds expose a single changeSet; pipeline builds
+				// expose a list of changeSets. Collect items from both.
+				var changes []client.ChangeItem
+				if build.ChangeSet != nil {
+					changes = append(changes, build.ChangeSet.Items...)
+				}
+				for _, cs := range build.ChangeSets {
+					changes = append(changes, cs.Items...)
+				}
+				if len(changes) > 0 {
+					fmt.Fprintf(os.Stdout, "  Changes:      %d\n", len(changes))
+					for _, c := range changes {
 						fmt.Fprintf(os.Stdout, "    - %s (%s)\n", c.Message, c.Author.FullName)
 					}
 				}

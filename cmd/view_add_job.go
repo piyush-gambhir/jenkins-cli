@@ -23,7 +23,7 @@ Examples:
 
   # Add a folder job to a view
   jenkins view add-job "Team View" my-folder/my-pipeline`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			viewName := args[0]
 			jobName := args[1]

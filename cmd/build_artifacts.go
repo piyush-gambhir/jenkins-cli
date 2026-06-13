@@ -36,7 +36,7 @@ Examples:
 
   # List artifacts as JSON
   jenkins build artifacts my-pipeline 42 -o json`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			number, err := client.ParseBuildNumber(args[1])

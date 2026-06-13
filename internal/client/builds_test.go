@@ -88,6 +88,55 @@ func TestGetBuild(t *testing.T) {
 	}
 }
 
+// Regression test: pipeline (WorkflowRun) builds expose "changeSets" (a
+// list), not the freestyle "changeSet" object — and result/description are
+// null while a build is running. Both shapes must parse.
+func TestGetBuild_PipelineChangeSetsAndNullFields(t *testing.T) {
+	ts, c := newBuildTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"number": 43,
+			"building": true,
+			"result": null,
+			"description": null,
+			"changeSets": [
+				{
+					"kind": "git",
+					"items": [
+						{"commitId": "abc123", "msg": "fix bug", "author": {"fullName": "Dev One"}},
+						{"commitId": "def456", "msg": "add feature", "author": {"fullName": "Dev Two"}}
+					]
+				}
+			],
+			"actions": [
+				{"_class": "hudson.model.CauseAction", "causes": [{"shortDescription": "Started by user admin"}]},
+				{"_class": "hudson.model.ParametersAction", "parameters": [{"name": "BRANCH", "value": "main"}]}
+			]
+		}`))
+	})
+	defer ts.Close()
+
+	build, err := c.GetBuild("my-job", 43)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if build.Result != "" {
+		t.Errorf("expected empty result for running build, got %q", build.Result)
+	}
+	if build.ChangeSet != nil {
+		t.Errorf("expected nil changeSet for pipeline build, got %+v", build.ChangeSet)
+	}
+	if len(build.ChangeSets) != 1 || len(build.ChangeSets[0].Items) != 2 {
+		t.Fatalf("expected 1 changeSet with 2 items, got %+v", build.ChangeSets)
+	}
+	if build.ChangeSets[0].Items[1].Author.FullName != "Dev Two" {
+		t.Errorf("unexpected author: %q", build.ChangeSets[0].Items[1].Author.FullName)
+	}
+	if len(build.Actions) != 2 {
+		t.Fatalf("expected 2 raw actions, got %d", len(build.Actions))
+	}
+}
+
 func TestGetBuildLog(t *testing.T) {
 	expectedLog := "Started by user admin\nBuilding...\nFinished: SUCCESS\n"
 	ts, c := newBuildTestServer(func(w http.ResponseWriter, r *http.Request) {

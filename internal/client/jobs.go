@@ -11,19 +11,19 @@ import (
 
 // Job represents a Jenkins job.
 type Job struct {
-	Name        string     `json:"name"`
-	URL         string     `json:"url"`
-	Color       string     `json:"color"`
-	FullName    string     `json:"fullName"`
-	DisplayName string     `json:"displayName"`
-	Description string     `json:"description"`
-	Buildable   bool       `json:"buildable"`
-	InQueue     bool       `json:"inQueue"`
-	LastBuild   *BuildRef  `json:"lastBuild"`
-	Jobs        []Job      `json:"jobs"`
-	Class       string     `json:"_class"`
-	Actions     []Action   `json:"actions"`
-	Property    []Property `json:"property"`
+	Name         string         `json:"name"`
+	URL          string         `json:"url"`
+	Color        string         `json:"color"`
+	FullName     string         `json:"fullName"`
+	DisplayName  string         `json:"displayName"`
+	Description  string         `json:"description"`
+	Buildable    bool           `json:"buildable"`
+	InQueue      bool           `json:"inQueue"`
+	LastBuild    *BuildRef      `json:"lastBuild"`
+	Jobs         []Job          `json:"jobs"`
+	Class        string         `json:"_class"`
+	Actions      []Action       `json:"actions"`
+	Property     []Property     `json:"property"`
 	HealthReport []HealthReport `json:"healthReport"`
 }
 
@@ -37,7 +37,7 @@ type BuildRef struct {
 
 // Action represents a Jenkins action.
 type Action struct {
-	Class              string           `json:"_class"`
+	Class                string            `json:"_class"`
 	ParameterDefinitions []ParamDefinition `json:"parameterDefinitions"`
 }
 
@@ -51,7 +51,7 @@ type ParamDefinition struct {
 
 // Property represents a job property.
 type Property struct {
-	Class              string           `json:"_class"`
+	Class                string            `json:"_class"`
 	ParameterDefinitions []ParamDefinition `json:"parameterDefinitions"`
 }
 

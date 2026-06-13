@@ -27,7 +27,7 @@ Examples:
 
   # Use a specific profile
   jenkins status --profile staging`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			info, err := jenkinsClient.GetServerInfo()
 			if err != nil {

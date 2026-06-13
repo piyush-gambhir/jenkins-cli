@@ -19,7 +19,7 @@ Exits quiet-down mode so Jenkins will resume starting new builds.
 Examples:
   # Cancel quiet-down mode
   jenkins system cancel-quiet-down`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := jenkinsClient.CancelQuietDown(); err != nil {
 				return fmt.Errorf("cancelling quiet down: %w", err)

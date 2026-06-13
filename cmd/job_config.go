@@ -25,7 +25,7 @@ Examples:
 
   # View config for a job in a folder
   jenkins job config my-folder/my-pipeline`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 

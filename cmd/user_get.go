@@ -23,7 +23,7 @@ Examples:
 
   # Output as JSON
   jenkins user get admin -o json`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]
 

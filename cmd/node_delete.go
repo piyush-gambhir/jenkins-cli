@@ -28,7 +28,7 @@ Examples:
 
   # Idempotent delete (no error if node doesn't exist)
   jenkins node delete my-agent --confirm --if-exists`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 

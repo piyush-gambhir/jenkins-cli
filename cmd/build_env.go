@@ -29,7 +29,7 @@ Examples:
 
   # Output as YAML
   jenkins build env my-pipeline 42 -o yaml`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			number, err := parseNumber(args[1])

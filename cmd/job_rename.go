@@ -23,7 +23,7 @@ Examples:
 
   # Rename a job in a folder
   jenkins job rename my-folder/old-name new-name`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			newName := args[1]

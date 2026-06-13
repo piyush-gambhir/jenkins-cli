@@ -36,7 +36,7 @@ Examples:
 
   # Idempotent delete (no error if credential doesn't exist)
   jenkins credential delete my-cred-id --confirm --if-exists`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]
 

@@ -8,19 +8,19 @@ import (
 
 // Node represents a Jenkins node/agent.
 type Node struct {
-	DisplayName     string       `json:"displayName"`
-	Description     string       `json:"description"`
-	Idle            bool         `json:"idle"`
-	JNLPAgent       bool         `json:"jnlpAgent"`
-	LaunchSupported bool         `json:"launchSupported"`
-	ManualLaunchAllowed bool     `json:"manualLaunchAllowed"`
-	NumExecutors    int          `json:"numExecutors"`
-	Offline         bool         `json:"offline"`
-	OfflineCause    *OfflineCause `json:"offlineCause"`
-	OfflineCauseReason string    `json:"offlineCauseReason"`
-	TemporarilyOffline bool      `json:"temporarilyOffline"`
-	MonitorData     json.RawMessage `json:"monitorData"`
-	Executors       []Executor   `json:"executors"`
+	DisplayName         string          `json:"displayName"`
+	Description         string          `json:"description"`
+	Idle                bool            `json:"idle"`
+	JNLPAgent           bool            `json:"jnlpAgent"`
+	LaunchSupported     bool            `json:"launchSupported"`
+	ManualLaunchAllowed bool            `json:"manualLaunchAllowed"`
+	NumExecutors        int             `json:"numExecutors"`
+	Offline             bool            `json:"offline"`
+	OfflineCause        *OfflineCause   `json:"offlineCause"`
+	OfflineCauseReason  string          `json:"offlineCauseReason"`
+	TemporarilyOffline  bool            `json:"temporarilyOffline"`
+	MonitorData         json.RawMessage `json:"monitorData"`
+	Executors           []Executor      `json:"executors"`
 }
 
 // OfflineCause represents why a node is offline.
@@ -31,17 +31,17 @@ type OfflineCause struct {
 
 // Executor represents an executor on a node.
 type Executor struct {
-	Idle     bool          `json:"idle"`
-	Number   int           `json:"number"`
-	Progress int           `json:"progress"`
+	Idle              bool      `json:"idle"`
+	Number            int       `json:"number"`
+	Progress          int       `json:"progress"`
 	CurrentExecutable *BuildRef `json:"currentExecutable"`
 }
 
 // ComputerResponse wraps the computer (node) list response.
 type ComputerResponse struct {
-	Computers     []Node `json:"computer"`
-	TotalExecutors int   `json:"totalExecutors"`
-	BusyExecutors  int   `json:"busyExecutors"`
+	Computers      []Node `json:"computer"`
+	TotalExecutors int    `json:"totalExecutors"`
+	BusyExecutors  int    `json:"busyExecutors"`
 }
 
 // ListNodes lists all nodes.

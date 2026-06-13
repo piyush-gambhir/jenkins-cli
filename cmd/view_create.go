@@ -29,7 +29,7 @@ Examples:
 
   # Idempotent create (no error if view already exists)
   jenkins view create "My Team" --if-not-exists`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 

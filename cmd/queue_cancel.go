@@ -20,7 +20,7 @@ this command to cancel the pending build.
 Examples:
   # Cancel queue item with ID 123
   jenkins queue cancel 123`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id, err := parseNumber(args[0])
 			if err != nil {

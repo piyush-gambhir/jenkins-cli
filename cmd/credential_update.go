@@ -32,7 +32,7 @@ Examples:
 
   # Update in a specific store and domain
   jenkins credential update my-cred-id --from-file cred.xml --store system --domain my-domain`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			id := args[0]
 

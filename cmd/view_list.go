@@ -24,7 +24,7 @@ Examples:
 
   # Output as JSON
   jenkins view list -o json`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			views, err := jenkinsClient.ListViews()
 			if err != nil {

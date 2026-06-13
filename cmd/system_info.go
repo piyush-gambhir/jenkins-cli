@@ -28,7 +28,7 @@ Examples:
 
   # Output as YAML
   jenkins system info -o yaml`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			info, err := jenkinsClient.GetServerInfo()
 			if err != nil {

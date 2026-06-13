@@ -8,10 +8,10 @@ import (
 
 // User represents a Jenkins user.
 type User struct {
-	ID              string `json:"id"`
-	FullName        string `json:"fullName"`
-	Description     string `json:"description"`
-	AbsoluteURL     string `json:"absoluteUrl"`
+	ID                     string   `json:"id"`
+	FullName               string   `json:"fullName"`
+	Description            string   `json:"description"`
+	AbsoluteURL            string   `json:"absoluteUrl"`
 	LastGrantedAuthorities []string `json:"lastGrantedAuthorities,omitempty"`
 }
 
@@ -25,9 +25,9 @@ type UserInfo struct {
 
 // UserListItem wraps a user reference.
 type UserListItem struct {
-	User            User   `json:"user"`
-	LastChange      int64  `json:"lastChange"`
-	Project         UserProject `json:"project"`
+	User       User        `json:"user"`
+	LastChange int64       `json:"lastChange"`
+	Project    UserProject `json:"project"`
 }
 
 // UserProject represents the project in user list.

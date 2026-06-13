@@ -27,7 +27,7 @@ Examples:
 
   # Delete a build for a job in a folder
   jenkins build delete my-folder/my-pipeline 10 --confirm`,
-		Args:  cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 			number, err := client.ParseBuildNumber(args[1])

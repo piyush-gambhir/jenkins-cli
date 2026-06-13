@@ -34,7 +34,7 @@ Examples:
 
   # Run a script from stdin
   cat script.groovy | jenkins system run-script --from-file -`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var scriptContent string
 

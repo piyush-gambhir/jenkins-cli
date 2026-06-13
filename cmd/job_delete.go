@@ -32,7 +32,7 @@ Examples:
 
   # Idempotent delete (no error if job doesn't exist)
   jenkins job delete my-pipeline --confirm --if-exists`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 

@@ -39,7 +39,7 @@ Examples:
 
   # Idempotent create (no error if job already exists)
   jenkins job create my-new-job --from-file config.xml --if-not-exists`,
-		Args:  cobra.ExactArgs(1),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 

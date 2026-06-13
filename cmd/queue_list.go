@@ -26,7 +26,7 @@ Examples:
 
   # Output as JSON
   jenkins queue list -o json`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			items, err := jenkinsClient.ListQueue()
 			if err != nil {

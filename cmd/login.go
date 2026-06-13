@@ -32,7 +32,7 @@ Examples:
 
   # Login and save with a specific profile name
   jenkins login --name staging`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if noInputFlag {
 				return fmt.Errorf("interactive input required but --no-input is set. Use environment variables JENKINS_URL, JENKINS_USER, and JENKINS_TOKEN instead.")

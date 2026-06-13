@@ -24,7 +24,7 @@ Examples:
 
   # Output as JSON
   jenkins whoami -o json`,
-		Args:  cobra.NoArgs,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			user, err := jenkinsClient.WhoAmI()
 			if err != nil {
