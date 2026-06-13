@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark light" />
-  <title>Jenkins CLI — manage Jenkins from your terminal</title>
-  <meta name="description" content="A fast, scriptable command-line interface for Jenkins CI/CD. Trigger builds, stream logs, manage jobs, nodes, plugins, credentials, pipelines, and views — with JSON output for scripts and agents." />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <title>Jenkins CLI, manage Jenkins from your terminal</title>
+  <meta name="description" content="A fast, scriptable command-line interface for Jenkins CI/CD. Trigger builds, stream logs, manage jobs, nodes, plugins, credentials, pipelines, and views, with JSON output for scripts and agents." />
   <meta property="og:title" content="Jenkins CLI" />
-  <meta property="og:description" content="Manage Jenkins from the command line — trigger builds, stream logs, jobs, nodes, plugins, with first-class JSON output." />
+  <meta property="og:description" content="Manage Jenkins from the command line, trigger builds, stream logs, jobs, nodes, plugins, with first-class JSON output." />
   <meta property="og:type" content="website" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -84,7 +85,7 @@
     .meta span { display: inline-flex; align-items: center; gap: 8px; }
     .meta .dot { width: 3px; height: 3px; background: currentColor; border-radius: 50%; opacity: .6; }
 
-    .term { margin-top: 52px; background: var(--code-bg); border: 1px solid var(--border-2); border-radius: 16px; overflow: hidden; box-shadow: 0 40px 90px -32px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.02); }
+    .term { position: relative; margin-top: 52px; background: var(--code-bg); border: 1px solid var(--border-2); border-radius: 16px; overflow: hidden; box-shadow: 0 40px 90px -32px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.02); }
     .term-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.018); }
     .term-dot { width: 11px; height: 11px; border-radius: 50%; }
     .term-title { margin-left: 10px; font: 500 12px/1 'Geist Mono', monospace; color: var(--text-subtle-solid); }
@@ -115,10 +116,10 @@
     .code { position: relative; background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
     .code:hover { border-color: var(--border-2); }
     .code pre { padding: 17px 19px; overflow-x: auto; font-size: 13px; line-height: 1.75; color: var(--text); white-space: pre; }
-    .code .copy { position: absolute; top: 9px; right: 9px; padding: 5px 11px; font: 500 11.5px/1 'Geist', sans-serif; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-2); border-radius: 7px; cursor: pointer; transition: all .15s; opacity: 0; }
-    .code:hover .copy { opacity: 1; }
-    .code .copy:hover { color: var(--text); border-color: rgba(255,255,255,0.28); }
-    .code .copy.copied { color: var(--green); border-color: rgba(95,214,164,0.4); opacity: 1; }
+    .code .copy, .term .copy { position: absolute; top: 9px; right: 9px; padding: 5px 11px; font: 500 11.5px/1 'Geist', sans-serif; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-2); border-radius: 7px; cursor: pointer; transition: all .15s; opacity: 0; }
+    .code:hover .copy, .term:hover .copy { opacity: 1; }
+    .code .copy:hover, .term .copy:hover { color: var(--text); border-color: rgba(255,255,255,0.28); }
+    .code .copy.copied, .term .copy.copied { color: var(--green); border-color: rgba(95,214,164,0.4); opacity: 1; }
     .cm { color: var(--text-subtle-solid); }
     .ci { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 1.5px 7px; font-size: .86em; color: var(--accent); }
 
@@ -188,7 +189,7 @@
 
     <header>
       <h1>Manage Jenkins<br/><span class="grad">from the command line.</span></h1>
-      <p class="lede">Trigger builds, stream console logs, and manage jobs, nodes, plugins, credentials, pipelines, and views — all without leaving the terminal. First-class JSON output for scripts and agents.</p>
+      <p class="lede">Trigger builds, stream console logs, and manage jobs, nodes, plugins, credentials, pipelines, and views, all without leaving the terminal. First-class JSON output for scripts and agents.</p>
       <div class="cta-row">
         <a href="#install" class="btn btn-primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
@@ -211,7 +212,7 @@
           <span class="term-dot" style="background:#ff5f57"></span>
           <span class="term-dot" style="background:#febc2e"></span>
           <span class="term-dot" style="background:#28c840"></span>
-          <span class="term-title">— jenkins</span>
+          <span class="term-title">jenkins</span>
         </div>
         <pre><span class="p">$</span> jenkins login
 <span class="ok">✓</span> authenticated as <span class="dim">admin</span> · <span class="dim">https://jenkins.example.com</span>
@@ -243,7 +244,7 @@
       </div>
 
       <div class="block">
-        <div class="block-label">Recommended — install script</div>
+        <div class="block-label">Recommended, install script</div>
         <div class="code">
           <button class="copy" onclick="copyCode(this)">Copy</button>
           <pre>curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh</pre>
@@ -291,8 +292,8 @@ sudo mv jenkins /usr/local/bin/</pre>
           <span class="term-dot" style="background:#ff5f57"></span>
           <span class="term-dot" style="background:#febc2e"></span>
           <span class="term-dot" style="background:#28c840"></span>
-          <span class="term-title">— quick start</span>
-          <button class="copy" onclick="copyCode(this)" style="position:absolute;right:14px;top:10px;opacity:1;">Copy</button>
+          <span class="term-title">quick start</span>
+          <button class="copy" onclick="copyCode(this)">Copy</button>
         </div>
         <pre><span class="cm"># 1. Authenticate (saves a profile to ~/.config/jenkins-cli/)</span>
 jenkins login
@@ -301,7 +302,7 @@ jenkins login
 jenkins status
 jenkins whoami
 
-<span class="cm"># 3. List jobs — filter by status</span>
+<span class="cm"># 3. List jobs, filter by status</span>
 jenkins job list
 jenkins job list <span class="flag">--recursive</span> <span class="flag">--status</span> FAILURE
 
@@ -331,11 +332,11 @@ jenkins job list <span class="flag">-o</span> json <span class="dim">|</span> jq
         <div class="auth-grid">
           <div class="auth-card">
             <div class="top"><span class="name">interactive</span><span class="tag tag-cloud">Default</span></div>
-            <div class="d">Prompted setup — enter your Jenkins URL, username, and API token. <em>Saved locally.</em></div>
+            <div class="d">Prompted setup, enter your Jenkins URL, username, and API token. <em>Saved locally.</em></div>
           </div>
           <div class="auth-card">
             <div class="top"><span class="name">env vars</span><span class="tag tag-dc">CI / Agents</span></div>
-            <div class="d">Set <code class="ci">JENKINS_URL</code>, <code class="ci">JENKINS_USERNAME</code>, and <code class="ci">JENKINS_TOKEN</code> — no profile file needed.</div>
+            <div class="d">Set <code class="ci">JENKINS_URL</code>, <code class="ci">JENKINS_USERNAME</code>, and <code class="ci">JENKINS_TOKEN</code>, no profile file needed.</div>
           </div>
           <div class="auth-card">
             <div class="top"><span class="name">profiles</span><span class="tag tag-cloud">Multi-server</span></div>
