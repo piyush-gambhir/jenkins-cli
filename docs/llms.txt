@@ -1,0 +1,998 @@
+# Jenkins CLI
+
+> A comprehensive command-line interface (binary `jenkins`) for managing Jenkins CI/CD servers — jobs, builds, nodes, plugins, credentials, pipelines, views, and system administration — designed for both human operators and coding agents (LLMs).
+
+Jenkins CLI is an **independent, unofficial** tool. It is not affiliated with, endorsed by, or sponsored by Jenkins, the Jenkins project, or the Continuous Delivery Foundation. It talks to any Jenkins controller over its HTTP REST API using your own Jenkins username and API token.
+
+- Binary name: `jenkins`
+- Written in Go (module `github.com/piyush-gambhir/jenkins-cli`); distributed as a single static binary.
+- Supported platforms: macOS, Linux, and Windows on both `amd64` and `arm64` (Windows builds are `amd64` only).
+- Authentication is HTTP Basic with your username + API token; CSRF crumbs are fetched and attached automatically on write requests — you never manage them by hand.
+- Every list/get command supports `-o json` and `-o yaml` for machine-readable output, which makes the tool well suited to scripting and to driving by an LLM/agent.
+
+## Links
+
+- Home: https://jenkins-cli.pages.dev/
+- Source: https://github.com/piyush-gambhir/jenkins-cli
+- Issues: https://github.com/piyush-gambhir/jenkins-cli/issues
+- Privacy: https://jenkins-cli.pages.dev/privacy-policy
+- Terms: https://jenkins-cli.pages.dev/terms-of-service
+- Contact: https://jenkins-cli.pages.dev/contact
+
+## Install
+
+All methods produce the same `jenkins` binary.
+
+### Install script (Linux and macOS)
+
+```bash
+# Latest version
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh
+
+# Pin a specific version
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.1.0 sh
+
+# Install to a custom directory (default is /usr/local/bin)
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
+```
+
+The script auto-detects OS (`linux`/`darwin`) and architecture (`amd64`/`arm64`), downloads the matching release tarball, verifies dependencies (`curl`, `tar`), and installs the binary (using `sudo` only if the target directory is not writable).
+
+### go install
+
+```bash
+go install github.com/piyush-gambhir/jenkins-cli@latest
+```
+
+### From source
+
+```bash
+git clone https://github.com/piyush-gambhir/jenkins-cli.git
+cd jenkins-cli
+go build -o jenkins .
+sudo mv jenkins /usr/local/bin/
+
+# Or use the Makefile (injects version/commit/build-time):
+make build      # builds ./bin/jenkins
+make install    # go install with ldflags
+```
+
+### From GitHub Releases
+
+Download the prebuilt binary for your platform from https://github.com/piyush-gambhir/jenkins-cli/releases and place it somewhere on your `PATH`. Release archives are named `jenkins-cli_<os>_<arch>.tar.gz` (`.zip` on Windows) and contain a `jenkins` binary; a `checksums.txt` is published alongside them.
+
+### Self-update
+
+Once installed from a tagged release (not a `dev` build), the CLI can update itself:
+
+```bash
+jenkins update          # check and, after confirmation, download + install the latest release
+jenkins update --check  # only report whether a newer version exists; do not install
+```
+
+The updater downloads the platform archive plus `checksums.txt`, verifies the SHA-256 checksum before replacing the binary in place (atomic rename), and aborts on mismatch. If the install location is not writable it tells you to re-run with `sudo jenkins update`. A non-blocking background update check also runs on most commands and prints a notice to stderr when a new version is available (suppressed for `version` and `update`).
+
+## Authentication
+
+Jenkins authenticates with a **username + API token** — never your account password. The token is sent via HTTP Basic auth. Generate a token in the Jenkins UI at:
+
+```
+<jenkins-url>/user/<username>/configure
+```
+
+in the "API Token" section.
+
+Credentials can be supplied three ways. They are resolved with this precedence (highest first), evaluated per field:
+
+1. **Command-line flags** (`--server`, `--user`, `--token`, `--insecure`)
+2. **Environment variables** (`JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN`, `JENKINS_INSECURE`, `JENKINS_READ_ONLY`)
+3. **The active config profile** (selected by `--profile`, else the config's `current_profile`)
+
+The first non-empty value wins for each individual field, so you can keep a profile for the URL and username and override only the token via an environment variable, etc. If no Jenkins URL can be resolved from any source, the command errors with a hint to run `jenkins login` or set `JENKINS_URL`.
+
+### Interactive login (recommended for humans)
+
+```bash
+jenkins login                 # prompts for URL, username, API token, and a profile name
+jenkins login --name staging  # save under the profile name "staging"
+```
+
+`login` prompts for the Jenkins URL, username, API token, and a profile name (default profile name is `default`). It reads the answers from stdin. It tests the connection (by calling the equivalent of `whoami`) before saving the profile to the config file. The first profile saved becomes the `current_profile`. With `--no-input` set, `login` errors immediately and tells you to use the environment variables instead.
+
+`login` flags:
+- `--name <profile>` — profile name to save under (default: prompted, falling back to `default`).
+- It also honors the global `--insecure`/`-k` flag when testing/saving the connection.
+
+### Environment variables
+
+```bash
+export JENKINS_URL=https://jenkins.example.com
+export JENKINS_USER=admin
+export JENKINS_TOKEN=11a1b2c3d4e5f6...
+# No `jenkins login` needed when these are set — ideal for CI.
+```
+
+Full list of recognized environment variables:
+
+| Variable            | Effect |
+|---------------------|--------|
+| `JENKINS_URL`       | Jenkins server base URL (trailing slashes are trimmed) |
+| `JENKINS_USER`      | Jenkins username |
+| `JENKINS_TOKEN`     | Jenkins API token |
+| `JENKINS_INSECURE`  | Skip TLS verification when truthy (Go `strconv.ParseBool`: `true`/`1`/`t`, etc.) |
+| `JENKINS_READ_ONLY` | Enable read-only safety mode when truthy (blocks all mutating commands) |
+| `JENKINS_NO_INPUT`  | Disable interactive prompts when set to any value other than empty/`0`/`false` |
+| `JENKINS_QUIET`     | Suppress informational output when set to any value other than empty/`0`/`false` |
+| `XDG_CONFIG_HOME`   | If set, the config lives under `$XDG_CONFIG_HOME/jenkins-cli/` instead of `~/.config/jenkins-cli/` |
+
+### Per-invocation flags (no stored profile needed)
+
+```bash
+jenkins status \
+  --server https://jenkins.example.com \
+  --user admin \
+  --token 11a1b2c3d4...
+```
+
+### Multiple accounts / profiles
+
+```bash
+jenkins login --name production
+jenkins login --name staging
+
+jenkins status   --profile staging
+jenkins job list --profile production
+```
+
+Profiles are stored in the config file (see "Configuration & profiles"). Select one per command with `--profile <name>`; with no `--profile`, the config's `current_profile` is used.
+
+### Self-signed / internal TLS
+
+```bash
+jenkins login --insecure
+jenkins status --insecure   # or -k, or JENKINS_INSECURE=true
+```
+
+### Read-only safety mode (for agents)
+
+Set `--read-only` (or `JENKINS_READ_ONLY=true`, or `read_only: true` on a profile) to block every mutating command (anything that creates, updates, deletes, builds, restarts, etc. — see the "(mutates)" markers below). Blocked commands fail with a clear message and a non-zero exit. A flag explicitly set on the command line overrides the profile/env setting (`--read-only=false` re-enables writes).
+
+## Global flags
+
+These persistent flags are available on every command:
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--output` | `-o` | `table` | Output format: `table`, `json`, or `yaml` |
+| `--profile` | | (current_profile) | Configuration profile to use |
+| `--server` | `-s` | | Jenkins server URL (overrides profile/env) |
+| `--user` | `-u` | | Jenkins username (overrides profile/env) |
+| `--token` | `-t` | | Jenkins API token (overrides profile/env) |
+| `--insecure` | `-k` | `false` | Skip TLS certificate verification |
+| `--no-color` | | `false` | Disable colored output |
+| `--verbose` | `-v` | `false` | Verbose output — logs each HTTP request/response to stderr (auth headers are redacted) |
+| `--read-only` | | `false` | Block all write/mutating operations (safety mode for agents) |
+| `--no-input` | | `false` | Disable all interactive prompts (for CI/agent use) |
+| `--quiet` | `-q` | `false` | Suppress informational (non-data) output |
+
+Notes for agents:
+- `--no-input` makes prompts an error instead of hanging. Destructive commands then require their explicit `--confirm` flag; `login` requires the `JENKINS_*` env vars. (`JENKINS_NO_INPUT` and `JENKINS_QUIET` are equivalent to the flags.)
+- `--quiet` silences human-friendly status lines ("Job created successfully.", etc.) but never silences requested data output — tables/JSON/YAML always go to stdout.
+- Errors go to stderr. With `-o json`, errors are emitted as a JSON object `{"error": "...", "status_code": <n>}` (`status_code` is the HTTP status when the failure came from the Jenkins API, else omitted/0); otherwise as `Error: <message>`. The process exits with code 1 on any failure, 0 on success.
+
+## Job path notation
+
+Jenkins organizes items in folders. This CLI uses **slash-separated paths** everywhere a `<job-path>` argument appears — NOT the Jenkins URL form (`job/a/job/b`):
+
+```
+my-job                  # root-level job
+my-folder/my-job        # job inside a folder
+team/project/pipeline   # nested folders
+```
+
+The CLI translates these to the underlying `job/.../job/...` API path for you.
+
+## Commands
+
+Top-level commands: `login`, `status`, `whoami`, `version`, `update`, and the command groups `job`, `build`, `queue`, `node`, `view`, `plugin`, `credential`, `user`, `pipeline`, `system`.
+
+Group aliases (interchangeable with the primary name):
+- `job` → `jobs`
+- `build` → `builds`
+- `node` → `nodes`, `agent`, `agents`
+- `view` → `views`
+- `plugin` → `plugins`
+- `credential` → `credentials`, `cred`, `creds`
+- `user` → `users`
+
+(`queue`, `pipeline`, and `system` have no aliases.)
+
+Commands that **mutate** server state honor read-only mode and are marked with "(mutates)" below. Running any subcommand with `--help` prints its full help, examples, and flags.
+
+### Top-level commands
+
+```
+jenkins login [--name <profile>]
+```
+Interactively authenticate and save a connection profile. Tests the connection before saving. Skips the normal auth/config bootstrap and the update check.
+```bash
+jenkins login
+jenkins login --name staging
+```
+
+```
+jenkins status [flags]
+```
+Show server connectivity and info: URL, version, mode, security, CSRF (crumbs) status, executor count, quiet-down status, and description.
+```bash
+jenkins status
+jenkins status -o json
+jenkins status --profile staging
+```
+
+```
+jenkins whoami [flags]
+```
+Show the currently authenticated user (id, full name, URL, description).
+```bash
+jenkins whoami
+jenkins whoami -o json
+```
+
+```
+jenkins version
+```
+Print version, commit, and build time. Skips auth and the update check.
+```bash
+jenkins version
+```
+
+```
+jenkins update [--check]
+```
+Self-update from GitHub Releases (SHA-256 checksum-verified). `--check` only reports availability and does not install. Cannot update a `dev` build.
+```bash
+jenkins update
+jenkins update --check
+```
+
+### job — manage Jenkins jobs
+
+(alias: `jobs`)
+
+```
+jenkins job list [flags]
+```
+List jobs at the root or in a folder. Table columns: NAME, STATUS, LAST BUILD, RESULT.
+- `-f, --folder <path>` — folder to list from
+- `-r, --recursive` — traverse all subfolders
+- `--status <STATUS>` — filter by job status: `SUCCESS`, `FAILURE`, `UNSTABLE`, `DISABLED`, `ABORTED`, `NOT_BUILT`, `RUNNING`
+```bash
+jenkins job list
+jenkins job list --folder my-team --recursive
+jenkins job list --recursive --status FAILURE -o json
+```
+
+```
+jenkins job get <job-path> [flags]
+```
+Detailed job info: name, full name, URL, buildable/in-queue, color/status, description, last build, health, parameters, and child jobs (for folders).
+```bash
+jenkins job get my-pipeline
+jenkins job get team/project/deploy-pipeline -o json
+```
+
+```
+jenkins job build <job-path> [flags]
+```
+(mutates) Trigger a build, optionally with parameters, and optionally wait for completion and/or stream the console output.
+- `-p, --param <KEY=VALUE>` — build parameter, repeatable
+- `-w, --wait` — block until the build completes, then report its result
+- `-F, --follow` — stream the console output
+- `--timeout <dur>` — max wait for `--wait`/`--follow` (default `30m`; Go duration syntax, e.g. `1h`, `90s`)
+
+Behavior: with `--wait` (and/or `--follow`) the command waits for the build to finish and prints `Build #N completed: RESULT (duration: ...)`; if `--follow` is also set, it then prints the full console output. With only `--follow` (no `--wait`) it waits for the queued build to start and streams the log live. The command exits non-zero only if triggering/waiting fails — a completed build whose result is `FAILURE` does not by itself set a non-zero exit code, so inspect the printed `RESULT` (or fetch it via `build get -o json`) to branch on build outcome.
+```bash
+jenkins job build my-pipeline
+jenkins job build my-pipeline --param BRANCH=main --param ENV=staging
+jenkins job build my-pipeline --wait
+jenkins job build my-pipeline --follow
+jenkins job build my-folder/deploy --param VERSION=1.2.3 --wait --follow --timeout 1h
+```
+
+```
+jenkins job create <job-name> [flags]
+```
+(mutates) Create a job from an XML `config.xml`.
+- `--from-file <path>` — XML config (required; `-` reads stdin)
+- `-f, --folder <path>` — folder to create the job in
+- `--if-not-exists` — don't error if the job already exists (idempotent; treats HTTP 400/409 as "exists")
+```bash
+jenkins job create my-new-job --from-file config.xml
+cat config.xml | jenkins job create my-new-job --from-file -
+jenkins job create my-new-job --from-file config.xml --folder my-folder --if-not-exists
+```
+
+```
+jenkins job update <job-path> [flags]
+```
+(mutates) Replace a job's entire `config.xml`.
+- `--from-file <path>` — XML config (required; `-` reads stdin)
+```bash
+jenkins job update my-pipeline --from-file new-config.xml
+cat config.xml | jenkins job update my-folder/my-pipeline --from-file -
+```
+
+```
+jenkins job copy <source-job> <new-name> [flags]
+```
+(mutates) Copy a job to a new name.
+- `-f, --folder <path>` — folder context for the copy
+```bash
+jenkins job copy my-pipeline my-pipeline-copy
+jenkins job copy my-pipeline new-pipeline --folder my-folder
+```
+
+```
+jenkins job rename <job-path> <new-name>
+```
+(mutates) Rename a job, preserving config, history, and workspace.
+```bash
+jenkins job rename old-name new-name
+jenkins job rename my-folder/old-name new-name
+```
+
+```
+jenkins job delete <job-path> [flags]
+```
+(mutates) Permanently delete a job and its history.
+- `--confirm` — required to actually delete
+- `--if-exists` — don't error if the job is already gone (idempotent; treats HTTP 404 as success)
+```bash
+jenkins job delete my-pipeline --confirm
+jenkins job delete my-pipeline --confirm --if-exists
+```
+
+```
+jenkins job enable <job-path>
+```
+(mutates) Re-enable a disabled job.
+```bash
+jenkins job enable my-pipeline
+```
+
+```
+jenkins job disable <job-path>
+```
+(mutates) Disable a job so it cannot be triggered.
+```bash
+jenkins job disable my-folder/my-pipeline
+```
+
+```
+jenkins job config <job-path>
+```
+Print the raw `config.xml` to stdout (round-trips with `job update`).
+```bash
+jenkins job config my-pipeline > config.xml
+```
+
+```
+jenkins job wipe-workspace <job-path> [flags]
+```
+(mutates) Wipe the job's workspace directory on the controller.
+- `--confirm` — required
+```bash
+jenkins job wipe-workspace my-pipeline --confirm
+```
+
+### build — inspect and manage build runs
+
+(alias: `builds`)
+
+```
+jenkins build list <job-path> [flags]
+```
+List recent builds. Table columns: NUMBER, STATUS, TIMESTAMP, DURATION.
+- `-l, --limit <n>` — max builds (default `25`)
+- `--status <STATUS>` — filter: `SUCCESS`, `FAILURE`, `UNSTABLE`, `ABORTED`, `NOT_BUILT`, `RUNNING`
+```bash
+jenkins build list my-pipeline
+jenkins build list my-pipeline --status FAILURE --limit 10 -o json
+```
+
+```
+jenkins build get <job-path> <build-number> [flags]
+```
+Detailed build info (display name, URL, result, building, timestamp, duration, description, artifacts, change set). Aliases: `info`, `show`, `describe`.
+```bash
+jenkins build get my-pipeline 42
+jenkins build info my-pipeline 42 -o json
+```
+
+```
+jenkins build log <job-path> <build-number> [flags]
+```
+Print or stream console output.
+- `-f, --follow` — stream in real time (like `tail -f`)
+```bash
+jenkins build log my-pipeline 42
+jenkins build log my-pipeline 42 --follow
+jenkins build log my-pipeline 42 > build-42.log
+```
+
+```
+jenkins build stop <job-path> <build-number>
+```
+(mutates) Stop a running build (marks it `ABORTED`).
+```bash
+jenkins build stop my-pipeline 42
+```
+
+```
+jenkins build delete <job-path> <build-number> [flags]
+```
+(mutates) Permanently delete a build record, its log, and artifacts.
+- `--confirm` — required
+```bash
+jenkins build delete my-pipeline 42 --confirm
+```
+
+```
+jenkins build artifacts <job-path> <build-number> [flags]
+```
+List or download build artifacts. Table columns: FILE NAME, RELATIVE PATH.
+- `-d, --download` — download all artifacts
+- `--output-dir <dir>` — target directory (default: current directory)
+```bash
+jenkins build artifacts my-pipeline 42
+jenkins build artifacts my-pipeline 42 --download --output-dir ./artifacts
+```
+
+```
+jenkins build test-report <job-path> <build-number> [flags]
+```
+Test results: total/passed/failed/skipped counts, duration, and (on failures) failed test details.
+```bash
+jenkins build test-report my-pipeline 42
+jenkins build test-report my-pipeline 42 -o json
+```
+
+```
+jenkins build env <job-path> <build-number> [flags]
+```
+Injected environment variables for a build (requires the Environment Injector plugin). Table form prints `KEY=VALUE` lines sorted by key.
+```bash
+jenkins build env my-pipeline 42
+jenkins build env my-pipeline 42 -o json
+```
+
+```
+jenkins build stages <job-path> <build-number> [flags]
+```
+Pipeline stage breakdown (name, status, duration) via the Stage View (`wfapi`) endpoint. Pipeline jobs only.
+```bash
+jenkins build stages my-pipeline 42
+jenkins build stages my-pipeline 42 -o json
+```
+
+```
+jenkins build replay <job-path> <build-number>
+```
+(mutates) Replay a pipeline build, re-running it with the same pipeline script.
+```bash
+jenkins build replay my-pipeline 42
+```
+
+```
+jenkins build open <job-path> <build-number>
+```
+Open the build page in the system default browser (macOS `open`, Linux `xdg-open`, Windows `rundll32`).
+```bash
+jenkins build open my-pipeline 42
+```
+
+### queue — manage the build queue
+
+(no aliases)
+
+```
+jenkins queue list [flags]
+```
+List queued items. Table columns: ID, TASK, WHY, STUCK, BLOCKED.
+```bash
+jenkins queue list
+jenkins queue list -o json
+```
+
+```
+jenkins queue cancel <queue-id>
+```
+(mutates) Cancel a pending build by its numeric queue id (from `queue list`).
+```bash
+jenkins queue cancel 123
+```
+
+### node — manage nodes/agents
+
+(aliases: `nodes`, `agent`, `agents`)
+
+```
+jenkins node list [flags]
+```
+List nodes. Table columns: NAME, EXECUTORS, IDLE, OFFLINE, REASON.
+- `--offline` — only offline nodes
+- `--online` — only online nodes (mutually exclusive with `--offline`)
+```bash
+jenkins node list
+jenkins node list --offline -o json
+```
+
+```
+jenkins node get <node-name> [flags]
+```
+Node details (executors, idle/offline/temp-offline, JNLP agent, offline reason). The built-in controller node is named `(built-in)`.
+```bash
+jenkins node get my-agent
+jenkins node get "(built-in)" -o json
+```
+
+```
+jenkins node create <node-name> [flags]
+```
+(mutates) Create a permanent JNLP agent node.
+- `--remote-fs <path>` — remote filesystem root (required)
+- `--executors <n>` — executor count (default `1`)
+- `--labels "<a b c>"` — space-separated labels
+- `--if-not-exists` — idempotent create (treats HTTP 400/409 as "exists")
+```bash
+jenkins node create my-agent --remote-fs /home/jenkins --executors 2
+jenkins node create build-agent --remote-fs /opt/jenkins --labels "linux docker"
+```
+
+```
+jenkins node delete <node-name> [flags]
+```
+(mutates) Delete a node.
+- `--confirm` — required
+- `--if-exists` — idempotent delete (treats HTTP 404 as success)
+```bash
+jenkins node delete my-agent --confirm
+```
+
+```
+jenkins node enable <node-name>
+```
+(mutates) Bring a temporarily-offline node back online.
+```bash
+jenkins node enable my-agent
+```
+
+```
+jenkins node disable <node-name> [flags]
+```
+(mutates) Take a node temporarily offline.
+- `-m, --message <text>` — offline reason
+```bash
+jenkins node disable my-agent --message "Maintenance window"
+```
+
+```
+jenkins node log <node-name>
+```
+Print the agent connection log for a node (useful for diagnosing controller↔agent connectivity).
+```bash
+jenkins node log my-agent > agent.log
+```
+
+### view — manage dashboard views
+
+(alias: `views`)
+
+```
+jenkins view list [flags]
+```
+List views. Table columns: NAME, URL, DESCRIPTION.
+```bash
+jenkins view list -o json
+```
+
+```
+jenkins view get <view-name> [flags]
+```
+View details including contained jobs and their status.
+```bash
+jenkins view get "My View"
+jenkins view get "All" -o json
+```
+
+```
+jenkins view create <view-name> [flags]
+```
+(mutates) Create an (empty) view.
+- `--type <class>` — view type class name (default `hudson.model.ListView`)
+- `--if-not-exists` — idempotent create (treats HTTP 400/409 as "exists")
+```bash
+jenkins view create "My Team"
+jenkins view create "Dashboard" --type hudson.model.ListView --if-not-exists
+```
+
+```
+jenkins view delete <view-name> [flags]
+```
+(mutates) Delete a view (does not delete its jobs).
+- `--confirm` — required
+- `--if-exists` — idempotent delete (treats HTTP 404 as success)
+```bash
+jenkins view delete "My View" --confirm
+```
+
+```
+jenkins view add-job <view-name> <job-name>
+```
+(mutates) Add an existing job to a view.
+```bash
+jenkins view add-job "My View" my-pipeline
+jenkins view add-job "Team View" my-folder/my-pipeline
+```
+
+```
+jenkins view remove-job <view-name> <job-name>
+```
+(mutates) Remove a job from a view (the job itself is untouched).
+```bash
+jenkins view remove-job "My View" my-pipeline
+```
+
+### plugin — manage plugins
+
+(alias: `plugins`)
+
+```
+jenkins plugin list [flags]
+```
+List installed plugins. Table columns: SHORT NAME, VERSION, ENABLED, HAS UPDATE.
+- `--active` — only plugins that are both active and enabled
+- `--enabled` — only enabled plugins
+```bash
+jenkins plugin list
+jenkins plugin list --active -o json
+```
+
+```
+jenkins plugin get <plugin-name> [flags]
+```
+Plugin details (long/short name, version, active/enabled/has-update/pinned, URL, backup version, dependencies).
+```bash
+jenkins plugin get git
+jenkins plugin get workflow-aggregator -o json
+```
+
+```
+jenkins plugin install <plugin-name> [flags]
+```
+(mutates) Install a plugin from the update center (a Jenkins restart may be required to activate it).
+- `--version <ver>` — specific version
+- `--if-not-exists` — idempotent install (treats HTTP 400/409 as "already installed")
+```bash
+jenkins plugin install git
+jenkins plugin install git --version 5.2.0
+```
+
+```
+jenkins plugin uninstall <plugin-name> [flags]
+```
+(mutates) Mark a plugin for removal (requires a Jenkins restart to complete).
+- `--confirm` — required
+- `--if-exists` — idempotent uninstall (treats HTTP 404 as "not installed")
+```bash
+jenkins plugin uninstall git --confirm
+```
+
+```
+jenkins plugin check-updates [flags]
+```
+Trigger an update-center check and list plugins with available updates. Table columns: PLUGIN, CURRENT VERSION, HAS UPDATE.
+```bash
+jenkins plugin check-updates
+jenkins plugin check-updates -o json
+```
+
+### credential — manage credentials
+
+(aliases: `credentials`, `cred`, `creds`)
+
+Credentials live in a store (default `system`) and a domain (default `_`, the global domain). Most subcommands accept `--store` and `--domain`. Secret values (passwords, keys) are never exposed by the Jenkins API. Credential configs use Jenkins XML, not JSON.
+
+```
+jenkins credential list [flags]
+```
+List credentials. Table columns: ID, TYPE, DISPLAY NAME, DESCRIPTION.
+- `--store <name>` — credential store (default `system`)
+- `--domain <name>` — credential domain (default `_`)
+- `--type <text>` — filter by type name (case-insensitive substring match)
+```bash
+jenkins credential list
+jenkins credential list --type "SSH"
+jenkins credential list --store system --domain my-domain -o json
+```
+
+```
+jenkins credential get <credential-id> [flags]
+```
+Details for one credential (id, type, display name, description).
+- `--store <name>` (default `system`), `--domain <name>` (default `_`)
+```bash
+jenkins credential get my-ssh-key
+jenkins credential get my-cred --store system --domain my-domain -o json
+```
+
+```
+jenkins credential create [flags]
+```
+(mutates) Create a credential from an XML file. (Takes no positional argument — the id comes from the XML.)
+- `--from-file <path>` — XML config (required; `-` reads stdin)
+- `--store <name>` (default `system`), `--domain <name>` (default `_`)
+- `--if-not-exists` — idempotent create (treats HTTP 400/409 as "exists")
+
+Example XML for a username/password credential:
+```xml
+<com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl>
+  <scope>GLOBAL</scope>
+  <id>my-cred-id</id>
+  <username>admin</username>
+  <password>secret</password>
+  <description>My credential</description>
+</com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl>
+```
+```bash
+jenkins credential create --from-file cred.xml
+cat cred.xml | jenkins credential create --from-file - --store system --domain _
+```
+
+```
+jenkins credential update <credential-id> [flags]
+```
+(mutates) Replace a credential's config from XML.
+- `--from-file <path>` — required (`-` reads stdin)
+- `--store <name>` (default `system`), `--domain <name>` (default `_`)
+```bash
+jenkins credential update my-cred-id --from-file updated-cred.xml
+```
+
+```
+jenkins credential delete <credential-id> [flags]
+```
+(mutates) Delete a credential. Jobs referencing it will fail on their next run.
+- `--confirm` — required
+- `--store <name>` (default `system`), `--domain <name>` (default `_`)
+- `--if-exists` — idempotent delete (treats HTTP 404 as success)
+```bash
+jenkins credential delete my-cred-id --confirm
+jenkins credential delete my-cred-id --store system --domain my-domain --confirm
+```
+
+### user — list and inspect users
+
+(alias: `users`)
+
+```
+jenkins user list [flags]
+```
+List known users. Table columns: ID, NAME, LAST ACTIVITY.
+```bash
+jenkins user list -o json
+```
+
+```
+jenkins user get <user-id> [flags]
+```
+Details for a single user (id, name, URL, description).
+```bash
+jenkins user get admin -o json
+```
+
+### pipeline — Jenkinsfile validation and input steps
+
+(no aliases)
+
+```
+jenkins pipeline validate [flags]
+```
+Validate a **declarative** Jenkinsfile via the pipeline model converter (scripted pipelines are not supported by this endpoint). Prints the validation result to stdout.
+- `-f, --from-file <path>` — Jenkinsfile (required; `-` reads stdin)
+```bash
+jenkins pipeline validate --from-file Jenkinsfile
+cat Jenkinsfile | jenkins pipeline validate --from-file -
+```
+
+```
+jenkins pipeline input-list <job-path> <build-number> [flags]
+```
+List pending `input` steps for a paused pipeline build. Table columns: ID, MESSAGE, PROCEED, ABORT.
+```bash
+jenkins pipeline input-list my-pipeline 42 -o json
+```
+
+```
+jenkins pipeline input-submit <job-path> <build-number> <input-id> [flags]
+```
+(mutates) Proceed with a pending input, optionally supplying parameters.
+- `-p, --param <KEY=VALUE>` — input parameter, repeatable
+```bash
+jenkins pipeline input-submit my-pipeline 42 deploy-approval
+jenkins pipeline input-submit my-pipeline 42 deploy-approval --param ENV=prod --param VERSION=1.0
+```
+
+```
+jenkins pipeline input-abort <job-path> <build-number> <input-id>
+```
+(mutates) Abort a pending input step.
+```bash
+jenkins pipeline input-abort my-pipeline 42 deploy-approval
+```
+
+### system — server administration
+
+(no aliases)
+
+```
+jenkins system info [flags]
+```
+Detailed system info: URL, version, mode, description, executors, security, CSRF (crumbs), quiet-down, primary view, total views.
+```bash
+jenkins system info -o json
+```
+
+```
+jenkins system restart [flags]
+```
+(mutates) Restart Jenkins.
+- `--safe` — wait for running builds to finish before restarting
+- `--confirm` — required
+```bash
+jenkins system restart --confirm
+jenkins system restart --safe --confirm
+```
+
+```
+jenkins system quiet-down
+```
+(mutates) Enter quiet-down mode — no new builds start; running builds continue.
+```bash
+jenkins system quiet-down
+```
+
+```
+jenkins system cancel-quiet-down
+```
+(mutates) Exit quiet-down mode and resume starting builds.
+```bash
+jenkins system cancel-quiet-down
+```
+
+```
+jenkins system run-script [flags]
+```
+(mutates) Execute a Groovy script on the controller's script console and print its output. Runs with full controller access — use with caution. Exactly one of `--script`/`--from-file` is required.
+- `--script <code>` — inline Groovy
+- `--from-file <path>` — Groovy file (`-` reads stdin)
+```bash
+jenkins system run-script --script 'println Jenkins.instance.numExecutors'
+jenkins system run-script --from-file cleanup.groovy
+jenkins system run-script --script 'Jenkins.instance.allItems.each { println it.fullName }'
+```
+
+## Output formats
+
+Set with `-o`/`--output`, or via the config `defaults.output`. Supported values: `table` (default), `json`, `yaml`. An unrecognized value is an error.
+
+- **table** — human-readable. List commands print aligned columns (headers documented per command above); get/status/info commands print a labeled key/value layout. Some structures without a defined table layout fall back to JSON.
+- **json** — pretty-printed (2-space indent) JSON. **Best for scripting and for LLM/agent consumption** — pipe into `jq`. Errors are also JSON: `{"error": "...", "status_code": <n>}`.
+- **yaml** — YAML serialization of the same structures.
+
+```bash
+jenkins job list -o json
+jenkins build get my-pipeline 42 -o yaml
+jenkins node list -o json | jq '.[] | {name: .displayName, offline}'
+```
+
+Note: raw-text commands (`job config`, `build log`, `node log`, `pipeline validate`, `system run-script`) always emit their raw payload to stdout and ignore the `--output` format. The `build env` table form prints `KEY=VALUE` lines (its `-o json`/`yaml` form emits an object/map).
+
+## Configuration & profiles
+
+- **Location:** `~/.config/jenkins-cli/config.yaml` (or `$XDG_CONFIG_HOME/jenkins-cli/config.yaml` when `XDG_CONFIG_HOME` is set). The directory is created with mode `0700` and the file written `0600`.
+- **Format:** YAML. Created/updated by `jenkins login`; you may also edit it by hand.
+- **Behavior:** if the file does not exist, the CLI runs with an empty config (you can still supply everything via env vars or flags).
+
+Structure:
+
+```yaml
+current_profile: production        # which profile is used when --profile is omitted
+profiles:
+  production:
+    url: https://jenkins.example.com
+    username: admin
+    token: 11a1b2c3d4e5f6...
+    insecure: false                # optional; skip TLS verification
+    read_only: false               # optional; block mutating commands
+  staging:
+    url: https://staging.jenkins.example.com
+    username: deploy
+    token: 22b2c3d4e5f6...
+defaults:
+  output: json                     # optional default for -o (table | json | yaml)
+```
+
+- Create profiles with `jenkins login --name <name>`. The first profile saved becomes `current_profile`.
+- Select a profile per command with `--profile <name>`.
+- Per-field precedence is **flags > env vars > profile** (see Authentication). A profile supplies the baseline; env vars and flags override individual fields.
+- Trailing slashes in the URL are trimmed automatically.
+
+## Examples / recipes
+
+Trigger a build and stream its console output:
+```bash
+jenkins job build my-folder/deploy-pipeline --param BRANCH=main --follow
+```
+
+Trigger a build, block for completion, then read the result from JSON (since a failed build does not by itself fail the command):
+```bash
+jenkins job build deploy/production --param ENV=prod --wait --timeout 30m
+# Find the latest build number and check its result:
+jenkins build list deploy/production --limit 1 -o json | jq -r '.[0].result'
+```
+
+Export a job config, edit it, and re-import:
+```bash
+jenkins job config my-pipeline > config.xml
+# ...edit config.xml...
+jenkins job update my-pipeline --from-file config.xml
+```
+
+Find all failing jobs across every folder (JSON for an agent to parse):
+```bash
+jenkins job list --recursive --status FAILURE -o json
+```
+
+Diagnose a failed build end to end:
+```bash
+jenkins build get my-pipeline 42 -o json | jq '{result, timestamp, duration}'
+jenkins build stages my-pipeline 42 -o json      # which stage failed
+jenkins build test-report my-pipeline 42 -o json # failing tests
+jenkins build log my-pipeline 42                 # full console log
+```
+
+Inspect node capacity with jq:
+```bash
+jenkins node list -o json | jq '.[] | {name: .displayName, offline, executors: .numExecutors}'
+```
+
+Approve a paused pipeline deployment:
+```bash
+jenkins pipeline input-list my-pipeline 42 -o json
+jenkins pipeline input-submit my-pipeline 42 deploy-approval --param ENV=production
+```
+
+Drive safely from an agent (read-only by default, explicit confirmations for writes):
+```bash
+export JENKINS_READ_ONLY=true   # blocks all mutating commands
+jenkins job list --recursive -o json
+jenkins build log my-pipeline 42
+
+# To perform a write, drop read-only and confirm explicitly:
+jenkins --read-only=false --no-input job delete stale-job --confirm
+```
+
+Non-interactive auth for CI (no stored profile):
+```bash
+export JENKINS_URL=https://jenkins.example.com
+export JENKINS_USER=ci-bot
+export JENKINS_TOKEN=$CI_JENKINS_TOKEN
+jenkins --no-input --quiet job build my-pipeline --wait
+```
+
+Debug HTTP traffic when something fails (auth headers are redacted in the log):
+```bash
+jenkins --verbose status
+```
