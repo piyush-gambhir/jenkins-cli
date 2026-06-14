@@ -59,7 +59,9 @@ Quick start:
 
 All list/get commands support -o json and -o yaml for machine-readable output.
 
-Use "jenkins <command> --help" for detailed information about any command.`,
+Use "jenkins <command> --help" for detailed information about any command.
+
+Full command reference (for agents/LLMs): https://jenkins-cli.pages.dev/llms.txt`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Check env vars for --no-input and --quiet
 		if !noInputFlag {
