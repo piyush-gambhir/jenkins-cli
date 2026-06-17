@@ -20,7 +20,36 @@ Designed for both human operators and coding agents (LLMs). All list and get com
 
 ## Installation
 
-### From Source
+The recommended way to install is the standalone script, which downloads a
+prebuilt binary for your platform. No Go toolchain required.
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh
+```
+
+Install a specific version or to a custom directory:
+
+```bash
+# Pin a version
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.0 sh
+
+# Install somewhere on your PATH without sudo
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
+```
+
+You can also download a prebuilt archive for your platform directly from
+[GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
+place the `jenkins` binary in your `PATH`.
+
+### Alternative (requires Go)
+
+Using `go install`:
+
+```bash
+go install github.com/piyush-gambhir/jenkins-cli@latest
+```
+
+From source:
 
 ```bash
 git clone https://github.com/piyush-gambhir/jenkins-cli.git
@@ -28,22 +57,6 @@ cd jenkins-cli
 go build -o jenkins .
 sudo mv jenkins /usr/local/bin/
 ```
-
-### Using `go install`
-
-```bash
-go install github.com/piyush-gambhir/jenkins-cli@latest
-```
-
-### Using the Install Script
-
-```bash
-curl -sSL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | bash
-```
-
-### From GitHub Releases
-
-Download the latest binary for your platform from [GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and place it in your `PATH`.
 
 ## Quick Start
 
