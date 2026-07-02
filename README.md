@@ -31,7 +31,7 @@ Install a specific version or to a custom directory:
 
 ```bash
 # Pin a version
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.0 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.1 sh
 
 # Install somewhere on your PATH without sudo
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
