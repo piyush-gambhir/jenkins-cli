@@ -81,7 +81,7 @@ Examples:
 				jobs = filtered
 			}
 
-			if len(jobs) == 0 {
+			if len(jobs) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No jobs found.")
 				return nil
 			}

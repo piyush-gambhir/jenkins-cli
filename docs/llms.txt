@@ -126,8 +126,8 @@ Full list of recognized environment variables:
 | `JENKINS_TOKEN`     | Jenkins API token |
 | `JENKINS_INSECURE`  | Skip TLS verification when truthy (Go `strconv.ParseBool`: `true`/`1`/`t`, etc.) |
 | `JENKINS_READ_ONLY` | Enable read-only safety mode when truthy (blocks all mutating commands) |
-| `JENKINS_NO_INPUT`  | Disable interactive prompts when set to any value other than empty/`0`/`false` |
-| `JENKINS_QUIET`     | Suppress informational output when set to any value other than empty/`0`/`false` |
+| `JENKINS_NO_INPUT`  | Disable interactive prompts when set to `true` or `1` |
+| `JENKINS_QUIET`     | Suppress informational output when set to `true` or `1` |
 | `XDG_CONFIG_HOME`   | If set, the config lives under `$XDG_CONFIG_HOME/jenkins-cli/` instead of `~/.config/jenkins-cli/` |
 
 ### Per-invocation flags (no stored profile needed)

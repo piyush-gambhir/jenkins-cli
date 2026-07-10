@@ -31,7 +31,7 @@ Examples:
 				return fmt.Errorf("listing users: %w", err)
 			}
 
-			if len(users) == 0 {
+			if len(users) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No users found.")
 				return nil
 			}

@@ -31,7 +31,7 @@ Examples:
 				return fmt.Errorf("listing views: %w", err)
 			}
 
-			if len(views) == 0 {
+			if len(views) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No views found.")
 				return nil
 			}

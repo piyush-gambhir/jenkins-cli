@@ -218,6 +218,24 @@ func TestStreamBuildLog(t *testing.T) {
 	}
 }
 
+func TestStreamBuildLogReturnsHTTPError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "missing", http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	c := NewClient(config.Profile{URL: ts.URL, Username: "admin", Token: "tok"})
+	c.httpClient = ts.Client()
+	var buf bytes.Buffer
+	err := c.StreamBuildLog("missing-job", 1, &buf)
+	if err == nil {
+		t.Fatal("expected HTTP error")
+	}
+	if buf.Len() != 0 {
+		t.Fatalf("error response was written as log output: %q", buf.String())
+	}
+}
+
 func TestStopBuild(t *testing.T) {
 	var gotPath, gotMethod string
 	ts, c := newBuildTestServer(func(w http.ResponseWriter, r *http.Request) {

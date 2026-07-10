@@ -43,7 +43,7 @@ Examples:
 			}
 
 			if follow {
-				return jenkinsClient.StreamBuildLog(jobPath, number, os.Stdout)
+				return jenkinsClient.StreamBuildLog(jobPath, number, os.Stdout, cmd.Context())
 			}
 
 			log, err := jenkinsClient.GetBuildLog(jobPath, number)

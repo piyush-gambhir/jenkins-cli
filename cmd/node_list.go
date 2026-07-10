@@ -70,7 +70,7 @@ Examples:
 				nodes = filtered
 			}
 
-			if len(nodes) == 0 {
+			if len(nodes) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No nodes found.")
 				return nil
 			}

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -32,9 +33,11 @@ func ResolveAuth(flags FlagValues, envLookup EnvLookupFunc, cfg *Config, profile
 		pName = cfg.CurrentProfile
 	}
 	if pName != "" {
-		if p, ok := cfg.Profiles[pName]; ok {
-			base = p
+		p, ok := cfg.Profiles[pName]
+		if !ok {
+			return Profile{}, fmt.Errorf("profile %q not found", pName)
 		}
+		base = p
 	}
 
 	// Layer env vars

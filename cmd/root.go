@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -65,15 +66,11 @@ Full command reference (for agents/LLMs): https://jenkins-cli.pages.dev/llms.txt
 Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenkins/SKILL.md`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Check env vars for --no-input and --quiet
-		if !noInputFlag {
-			if v, ok := os.LookupEnv("JENKINS_NO_INPUT"); ok && v != "" && v != "0" && v != "false" {
-				noInputFlag = true
-			}
+		if !cmd.Flags().Changed("no-input") {
+			noInputFlag = envFlagEnabled("JENKINS_NO_INPUT")
 		}
-		if !quietFlag {
-			if v, ok := os.LookupEnv("JENKINS_QUIET"); ok && v != "" && v != "0" && v != "false" {
-				quietFlag = true
-			}
+		if !cmd.Flags().Changed("quiet") {
+			quietFlag = envFlagEnabled("JENKINS_QUIET")
 		}
 
 		// Start background update check for commands that should show it
@@ -135,6 +132,11 @@ Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenki
 	},
 	SilenceUsage:  true,
 	SilenceErrors: true,
+}
+
+func envFlagEnabled(name string) bool {
+	v := strings.TrimSpace(os.Getenv(name))
+	return strings.EqualFold(v, "true") || v == "1"
 }
 
 // startBackgroundUpdateCheck launches a goroutine to check for updates using

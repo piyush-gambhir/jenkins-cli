@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -197,6 +196,7 @@ func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ct
 		query := url.Values{"start": {start}}
 
 		resp, err := c.doRequest(requestOptions{
+			ctx:    streamCtx,
 			method: "GET",
 			path:   path,
 			query:  query,
@@ -205,13 +205,17 @@ func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ct
 			return fmt.Errorf("streaming log: %w", err)
 		}
 
-		scanner := bufio.NewScanner(resp.Body)
-		buf := make([]byte, 0, 64*1024)
-		scanner.Buffer(buf, 1024*1024)
-		for scanner.Scan() {
-			fmt.Fprintln(writer, scanner.Text())
+		if err := checkResponse(resp); err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("streaming log: %w", err)
 		}
-		resp.Body.Close()
+		if _, err := io.Copy(writer, resp.Body); err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("reading streamed log: %w", err)
+		}
+		if err := resp.Body.Close(); err != nil {
+			return fmt.Errorf("closing streamed log response: %w", err)
+		}
 
 		moreData := resp.Header.Get("X-More-Data")
 		newStart := resp.Header.Get("X-Text-Size")
