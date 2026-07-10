@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 // requestOptions configures an HTTP request.
 type requestOptions struct {
+	ctx         context.Context
 	method      string
 	path        string
 	body        io.Reader
@@ -32,7 +34,11 @@ func (c *Client) buildURL(path string, query url.Values) string {
 func (c *Client) newRequest(opts requestOptions) (*http.Request, error) {
 	fullURL := c.buildURL(opts.path, opts.query)
 
-	req, err := http.NewRequest(opts.method, fullURL, opts.body)
+	ctx := opts.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, opts.method, fullURL, opts.body)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}

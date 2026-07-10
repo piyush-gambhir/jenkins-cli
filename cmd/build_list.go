@@ -72,7 +72,7 @@ Examples:
 				builds = filtered
 			}
 
-			if len(builds) == 0 {
+			if len(builds) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No builds found.")
 				return nil
 			}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -49,7 +50,7 @@ Examples:
 				return fmt.Errorf("getting artifacts: %w", err)
 			}
 
-			if len(artifacts) == 0 {
+			if len(artifacts) == 0 && outFormat == output.FormatTable {
 				if !quietFlag {
 					fmt.Fprintln(os.Stdout, "No artifacts found.")
 				}
@@ -65,7 +66,10 @@ Examples:
 					if err != nil {
 						return fmt.Errorf("downloading %s: %w", a.FileName, err)
 					}
-					outPath := filepath.Join(outputDir, a.FileName)
+					outPath, err := artifactOutputPath(outputDir, a.RelativePath, a.FileName)
+					if err != nil {
+						return fmt.Errorf("invalid artifact path %q: %w", a.RelativePath, err)
+					}
 					if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 						return fmt.Errorf("creating directory: %w", err)
 					}
@@ -95,4 +99,26 @@ Examples:
 	cmd.Flags().StringVar(&outputDir, "output-dir", "", "Directory to download artifacts to")
 
 	return cmd
+}
+
+func artifactOutputPath(outputDir, relativePath, fileName string) (string, error) {
+	rel := relativePath
+	if rel == "" {
+		rel = fileName
+	}
+	rel = filepath.Clean(filepath.FromSlash(rel))
+	if rel == "." || filepath.IsAbs(rel) || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path escapes output directory")
+	}
+
+	root, err := filepath.Abs(outputDir)
+	if err != nil {
+		return "", err
+	}
+	out := filepath.Join(root, rel)
+	within, err := filepath.Rel(root, out)
+	if err != nil || within == ".." || strings.HasPrefix(within, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path escapes output directory")
+	}
+	return out, nil
 }

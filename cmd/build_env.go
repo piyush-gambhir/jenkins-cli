@@ -42,7 +42,7 @@ Examples:
 				return fmt.Errorf("getting env vars: %w", err)
 			}
 
-			if len(envVars) == 0 {
+			if len(envVars) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No environment variables found.")
 				return nil
 			}

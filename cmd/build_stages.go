@@ -42,7 +42,7 @@ Examples:
 				return fmt.Errorf("getting stages: %w", err)
 			}
 
-			if len(run.Stages) == 0 {
+			if len(run.Stages) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No stages found (is this a pipeline job?).")
 				return nil
 			}

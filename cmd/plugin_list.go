@@ -64,7 +64,7 @@ Examples:
 				plugins = filtered
 			}
 
-			if len(plugins) == 0 {
+			if len(plugins) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No plugins found.")
 				return nil
 			}

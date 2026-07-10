@@ -39,7 +39,7 @@ Examples:
 				return fmt.Errorf("listing pipeline inputs: %w", err)
 			}
 
-			if len(inputs) == 0 {
+			if len(inputs) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No pending inputs found.")
 				return nil
 			}

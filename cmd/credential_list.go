@@ -70,7 +70,7 @@ Examples:
 				creds = filtered
 			}
 
-			if len(creds) == 0 {
+			if len(creds) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "No credentials found.")
 				return nil
 			}
