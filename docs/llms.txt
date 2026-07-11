@@ -160,7 +160,7 @@ jenkins status --insecure   # or -k, or JENKINS_INSECURE=true
 
 ### Read-only safety mode (for agents)
 
-Set `--read-only` (or `JENKINS_READ_ONLY=true`, or `read_only: true` on a profile) to block every mutating command (anything that creates, updates, deletes, builds, restarts, etc., see the "(mutates)" markers below). Blocked commands fail with a clear message and a non-zero exit. A flag explicitly set on the command line overrides the profile/env setting (`--read-only=false` re-enables writes).
+Set `--read-only` (or `JENKINS_READ_ONLY=true`, or `read_only: true` on a profile) to block every mutating command (anything that creates, updates, deletes, builds, restarts, etc., see the "(mutates)" markers below). Blocked commands fail with a clear message and a non-zero exit. Profile and environment safety settings are sticky and must be removed explicitly before permitting writes.
 
 ## Global flags
 
@@ -986,7 +986,7 @@ jenkins job list --recursive -o json
 jenkins build log my-pipeline 42
 
 # To perform a write, drop read-only and confirm explicitly:
-jenkins --read-only=false --no-input job delete stale-job --confirm
+jenkins --no-input job delete stale-job --confirm # only after explicitly removing read-only mode
 ```
 
 Non-interactive auth for CI (no stored profile):

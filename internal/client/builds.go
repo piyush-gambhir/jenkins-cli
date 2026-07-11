@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -236,7 +237,9 @@ func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ct
 			case <-time.After(1 * time.Second):
 			}
 		} else {
-			time.Sleep(1 * time.Second)
+			if err := c.sleep(1 * time.Second); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -289,14 +292,31 @@ func (c *Client) GetBuildArtifacts(jobPath string, number int) ([]Artifact, erro
 
 // DownloadArtifact downloads a single artifact.
 func (c *Client) DownloadArtifact(jobPath string, number int, relativePath string) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := c.DownloadArtifactTo(c.ctx, jobPath, number, relativePath, &buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// DownloadArtifactTo streams a single artifact to w instead of retaining the
+// entire response in memory.
+func (c *Client) DownloadArtifactTo(ctx context.Context, jobPath string, number int, relativePath string, w io.Writer) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/artifact/%s", number, relativePath)
 
-	data, err := c.GetRaw(path, nil)
+	resp, err := c.doRequest(requestOptions{ctx: ctx, method: "GET", path: path})
 	if err != nil {
-		return nil, fmt.Errorf("downloading artifact: %w", err)
+		return fmt.Errorf("downloading artifact: %w", err)
+	}
+	defer resp.Body.Close()
+	if err := checkResponse(resp); err != nil {
+		return fmt.Errorf("downloading artifact: %w", err)
+	}
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		return fmt.Errorf("writing artifact: %w", err)
 	}
 
-	return data, nil
+	return nil
 }
 
 // GetBuildTestReport gets the test report for a build.

@@ -68,8 +68,9 @@ Examples:
 			}
 
 			// Create a context with the --timeout duration to cover all phases
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 			defer cancel()
+			jenkinsClient.SetContext(ctx)
 
 			if wait || follow {
 				if !quietFlag {

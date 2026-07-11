@@ -62,19 +62,40 @@ Examples:
 					outputDir = "."
 				}
 				for _, a := range artifacts {
-					data, err := jenkinsClient.DownloadArtifact(jobPath, number, a.RelativePath)
-					if err != nil {
-						return fmt.Errorf("downloading %s: %w", a.FileName, err)
-					}
 					outPath, err := artifactOutputPath(outputDir, a.RelativePath, a.FileName)
 					if err != nil {
 						return fmt.Errorf("invalid artifact path %q: %w", a.RelativePath, err)
 					}
-					if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
-						return fmt.Errorf("creating directory: %w", err)
+					if err := prepareArtifactPath(outputDir, outPath); err != nil {
+						return fmt.Errorf("invalid artifact path %q: %w", a.RelativePath, err)
 					}
-					if err := os.WriteFile(outPath, data, 0o644); err != nil {
-						return fmt.Errorf("writing %s: %w", outPath, err)
+					tmp, err := os.CreateTemp(filepath.Dir(outPath), ".artifact-*.tmp")
+					if err != nil {
+						return fmt.Errorf("creating artifact file: %w", err)
+					}
+					tmpName := tmp.Name()
+					if err := jenkinsClient.DownloadArtifactTo(cmd.Context(), jobPath, number, a.RelativePath, tmp); err != nil {
+						tmp.Close()
+						os.Remove(tmpName)
+						return fmt.Errorf("downloading %s: %w", a.FileName, err)
+					}
+					if err := tmp.Chmod(0o644); err != nil {
+						tmp.Close()
+						os.Remove(tmpName)
+						return fmt.Errorf("setting artifact permissions: %w", err)
+					}
+					if err := tmp.Sync(); err != nil {
+						tmp.Close()
+						os.Remove(tmpName)
+						return fmt.Errorf("syncing artifact: %w", err)
+					}
+					if err := tmp.Close(); err != nil {
+						os.Remove(tmpName)
+						return fmt.Errorf("closing artifact: %w", err)
+					}
+					if err := os.Rename(tmpName, outPath); err != nil {
+						os.Remove(tmpName)
+						return fmt.Errorf("replacing %s: %w", outPath, err)
 					}
 					if !quietFlag {
 						fmt.Fprintf(os.Stdout, "Downloaded: %s\n", outPath)
@@ -99,6 +120,38 @@ Examples:
 	cmd.Flags().StringVar(&outputDir, "output-dir", "", "Directory to download artifacts to")
 
 	return cmd
+}
+
+func prepareArtifactPath(outputDir, outPath string) error {
+	root, err := filepath.Abs(outputDir)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return err
+	}
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return err
+	}
+	parent := filepath.Dir(outPath)
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		return err
+	}
+	realParent, err := filepath.EvalSymlinks(parent)
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(realRoot, realParent)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("parent directory escapes output directory through a symlink")
+	}
+	if info, err := os.Lstat(outPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("destination is a symbolic link")
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func artifactOutputPath(outputDir, relativePath, fileName string) (string, error) {

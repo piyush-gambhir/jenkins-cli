@@ -72,7 +72,7 @@ func (c *Client) GetQueueItem(id int) (*QueueItem, error) {
 
 // CancelQueueItem cancels a queued build.
 func (c *Client) CancelQueueItem(id int) error {
-	path := fmt.Sprintf("/queue/cancelItem")
+	path := "/queue/cancelItem"
 	query := map[string][]string{"id": {fmt.Sprintf("%d", id)}}
 
 	_, err := c.Post(path, query)
@@ -104,7 +104,9 @@ func (c *Client) WaitForBuild(queueID int, timeout time.Duration) (*BuildRef, er
 			return nil, fmt.Errorf("queue item %d was cancelled", queueID)
 		}
 
-		time.Sleep(2 * time.Second)
+		if err := c.sleep(2 * time.Second); err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, fmt.Errorf("timed out waiting for build from queue item %d", queueID)

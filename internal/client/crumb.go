@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -43,12 +42,6 @@ func (cc *crumbCache) set(c *Crumb) {
 	cc.crumb = c
 }
 
-func (cc *crumbCache) invalidate() {
-	cc.mu.Lock()
-	defer cc.mu.Unlock()
-	cc.crumb = nil
-}
-
 // fetchCrumb retrieves the CSRF crumb from Jenkins.
 // Returns nil if CSRF is disabled (404 response).
 func (c *Client) fetchCrumb() (*Crumb, error) {
@@ -72,7 +65,7 @@ func (c *Client) fetchCrumb() (*Crumb, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
+		body, err := readAllLimited(resp.Body)
 		if err != nil {
 			return nil, fmt.Errorf("reading crumb error response: %w", err)
 		}

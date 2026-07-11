@@ -327,7 +327,9 @@ func (c *Client) TriggerBuildAndWait(jobPath string, params map[string]string, t
 		if !b.Building {
 			return b, nil
 		}
-		time.Sleep(2 * time.Second)
+		if err := c.sleep(2 * time.Second); err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, fmt.Errorf("build timed out after %s", timeout)
@@ -361,7 +363,9 @@ func (c *Client) WaitForQueuedBuild(queueURL string, timeout time.Duration) (*Bu
 			return nil, fmt.Errorf("build was cancelled in queue")
 		}
 
-		time.Sleep(2 * time.Second)
+		if err := c.sleep(2 * time.Second); err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, fmt.Errorf("timed out waiting for build to start")
