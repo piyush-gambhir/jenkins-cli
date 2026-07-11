@@ -18,7 +18,6 @@ type requestOptions struct {
 	contentType string
 	query       url.Values
 	headers     map[string]string
-	rawOutput   bool // don't expect JSON
 }
 
 // buildURL constructs a full URL from the base URL, path, and query parameters.
@@ -35,6 +34,9 @@ func (c *Client) newRequest(opts requestOptions) (*http.Request, error) {
 	fullURL := c.buildURL(opts.path, opts.query)
 
 	ctx := opts.ctx
+	if ctx == nil {
+		ctx = c.ctx
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -90,7 +92,7 @@ func checkResponse(resp *http.Response) error {
 	if resp.StatusCode < 400 {
 		return nil
 	}
-	body, err := io.ReadAll(resp.Body)
+	body, err := readAllLimited(resp.Body)
 	if err != nil {
 		return fmt.Errorf("reading error response body: %w", err)
 	}

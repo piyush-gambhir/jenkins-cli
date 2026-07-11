@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -26,10 +27,11 @@ func newUpdateCmd() *cobra.Command {
 	var checkOnly bool
 
 	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Update jenkins to the latest version",
-		Long:  "Check for and install the latest version of the Jenkins CLI from GitHub Releases.",
-		Args:  cobra.NoArgs,
+		Use:         "update",
+		Annotations: map[string]string{"mutates": "true"},
+		Short:       "Update jenkins to the latest version",
+		Long:        "Check for and install the latest version of the Jenkins CLI from GitHub Releases.",
+		Args:        cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo := "piyush-gambhir/jenkins-cli"
 			currentVersion := version.Version
@@ -58,6 +60,9 @@ func newUpdateCmd() *cobra.Command {
 
 			if checkOnly {
 				return nil
+			}
+			if noInputFlag {
+				return fmt.Errorf("update requires confirmation; cannot run with --no-input (use --check to check only)")
 			}
 
 			// Ask for confirmation
@@ -97,7 +102,7 @@ func newUpdateCmd() *cobra.Command {
 			defer os.RemoveAll(tmpDir)
 
 			archivePath := filepath.Join(tmpDir, archive)
-			if err := downloadFile(downloadURL, archivePath); err != nil {
+			if err := downloadFile(cmd.Context(), downloadURL, archivePath); err != nil {
 				return fmt.Errorf("downloading update: %w", err)
 			}
 
@@ -105,7 +110,7 @@ func newUpdateCmd() *cobra.Command {
 			checksumsURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/checksums.txt",
 				repo, info.LatestVersion)
 			checksumsPath := filepath.Join(tmpDir, "checksums.txt")
-			if err := downloadFile(checksumsURL, checksumsPath); err != nil {
+			if err := downloadFile(cmd.Context(), checksumsURL, checksumsPath); err != nil {
 				return fmt.Errorf("downloading checksums: %w", err)
 			}
 
@@ -158,7 +163,7 @@ func newUpdateCmd() *cobra.Command {
 				return fmt.Errorf("opening new binary: %w", err)
 			}
 
-			if _, err := io.Copy(tmpBin, src); err != nil {
+			if err := copyUpdatePayload(tmpBin, src); err != nil {
 				src.Close()
 				tmpBin.Close()
 				os.Remove(tmpBinPath)
@@ -190,12 +195,16 @@ func newUpdateCmd() *cobra.Command {
 }
 
 // downloadFile downloads a URL to a local file.
-func downloadFile(url, dest string) error {
+func downloadFile(ctx context.Context, url, dest string) error {
 	client := &http.Client{
 		Timeout: 120 * time.Second,
 	}
 
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -211,7 +220,7 @@ func downloadFile(url, dest string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	err = copyUpdatePayload(out, resp.Body)
 	return err
 }
 
@@ -246,7 +255,7 @@ func extractBinary(archivePath, destPath string) error {
 			if err != nil {
 				return err
 			}
-			if _, err := io.Copy(out, tr); err != nil {
+			if err := copyUpdatePayload(out, tr); err != nil {
 				out.Close()
 				return err
 			}
@@ -292,7 +301,7 @@ func sha256File(path string) (string, error) {
 	defer f.Close()
 
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if err := copyUpdatePayload(h, f); err != nil {
 		return "", err
 	}
 

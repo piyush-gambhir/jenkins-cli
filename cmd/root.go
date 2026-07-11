@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -66,8 +67,8 @@ Full command reference (for agents/LLMs): https://jenkins-cli.pages.dev/llms.txt
 Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenkins/SKILL.md`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Check env vars for --no-input and --quiet
-		if !cmd.Flags().Changed("no-input") {
-			noInputFlag = envFlagEnabled("JENKINS_NO_INPUT")
+		if envFlagEnabled("JENKINS_NO_INPUT") {
+			noInputFlag = true
 		}
 		if !cmd.Flags().Changed("quiet") {
 			quietFlag = envFlagEnabled("JENKINS_QUIET")
@@ -97,7 +98,7 @@ Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenki
 			return err
 		}
 
-		if err := setupJenkinsClient(&profile); err != nil {
+		if err := setupJenkinsClient(cmd.Context(), &profile); err != nil {
 			return err
 		}
 
@@ -211,19 +212,20 @@ func resolveProfile(cmd *cobra.Command) (config.Profile, error) {
 }
 
 // setupJenkinsClient creates the Jenkins API client from the resolved profile.
-func setupJenkinsClient(profile *config.Profile) error {
+func setupJenkinsClient(ctx context.Context, profile *config.Profile) error {
 	jenkinsClient = client.NewClient(*profile, verboseFlag)
+	jenkinsClient.SetContext(ctx)
 	return nil
 }
 
 // checkPermissions enforces read-only mode and no-input restrictions.
 func checkPermissions(cmd *cobra.Command, profile *config.Profile) error {
 	effectiveReadOnly := profile.ReadOnly
-	if cmd.Flags().Changed("read-only") {
-		effectiveReadOnly = readOnlyFlag
+	if readOnlyFlag {
+		effectiveReadOnly = true
 	}
 	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
-		return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
+		return fmt.Errorf("command '%s' is blocked in read-only mode; remove read_only from the profile or disable the read-only environment setting to permit writes", cmd.CommandPath())
 	}
 
 	return nil

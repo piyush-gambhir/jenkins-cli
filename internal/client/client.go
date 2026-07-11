@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -60,6 +61,7 @@ func (t *verboseTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 // Client is a Jenkins API client.
 type Client struct {
+	ctx        context.Context
 	baseURL    string
 	username   string
 	token      string
@@ -93,6 +95,7 @@ func NewClient(profile config.Profile, verbose ...bool) *Client {
 	jar, _ := cookiejar.New(nil)
 
 	return &Client{
+		ctx:      context.Background(),
 		baseURL:  strings.TrimRight(profile.URL, "/"),
 		username: profile.Username,
 		token:    profile.Token,
@@ -102,6 +105,26 @@ func NewClient(profile config.Profile, verbose ...bool) *Client {
 			Transport: rt,
 			Jar:       jar,
 		},
+	}
+}
+
+// SetContext sets the default context used by requests that do not provide a
+// more specific one. Cobra commands use this to propagate Ctrl-C cancellation.
+func (c *Client) SetContext(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	c.ctx = ctx
+}
+
+func (c *Client) sleep(d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-c.ctx.Done():
+		return c.ctx.Err()
 	}
 }
 
@@ -127,7 +150,7 @@ func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 		return nil, err
 	}
 
-	return io.ReadAll(resp.Body)
+	return readAllLimited(resp.Body)
 }
 
 // GetRaw performs a raw GET request without appending /api/json.
@@ -146,7 +169,7 @@ func (c *Client) GetRaw(path string, query url.Values) ([]byte, error) {
 		return nil, err
 	}
 
-	return io.ReadAll(resp.Body)
+	return readAllLimited(resp.Body)
 }
 
 // GetRawResponse performs a raw GET and returns the response without reading the body.
@@ -193,7 +216,7 @@ func (c *Client) Post(path string, query url.Values) ([]byte, error) {
 		return nil, err
 	}
 
-	return io.ReadAll(resp.Body)
+	return readAllLimited(resp.Body)
 }
 
 // PostXML performs a POST request with an XML body.
@@ -214,7 +237,7 @@ func (c *Client) PostXML(path string, query url.Values, xmlBody string) ([]byte,
 		return nil, nil, err
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readAllLimited(resp.Body)
 	return body, resp.Header, err
 }
 
@@ -244,7 +267,7 @@ func (c *Client) PostForm(path string, query url.Values, formData url.Values) ([
 		return nil, err
 	}
 
-	return io.ReadAll(resp.Body)
+	return readAllLimited(resp.Body)
 }
 
 // PostRaw performs a POST and returns the full response (headers included via http.Response).
@@ -260,7 +283,7 @@ func (c *Client) PostRaw(path string, query url.Values) (*http.Response, error) 
 
 	if resp.StatusCode >= 400 {
 		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
+		body, err := readAllLimited(resp.Body)
 		if err != nil {
 			return nil, fmt.Errorf("reading error response body: %w", err)
 		}

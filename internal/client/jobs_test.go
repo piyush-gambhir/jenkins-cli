@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -138,7 +137,7 @@ func TestCreateJob(t *testing.T) {
 		gotPath = r.URL.Path
 		gotName = r.URL.Query().Get("name")
 		gotContentType = r.Header.Get("Content-Type")
-		body, _ := io.ReadAll(r.Body)
+		body, _ := readAllLimited(r.Body)
 		gotBody = string(body)
 		w.WriteHeader(http.StatusOK)
 	})

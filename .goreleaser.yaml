@@ -19,11 +19,15 @@ builds:
     ldflags:
       - -s -w -X github.com/piyush-gambhir/jenkins-cli/internal/version.Version={{.Version}} -X github.com/piyush-gambhir/jenkins-cli/internal/version.Commit={{.Commit}} -X github.com/piyush-gambhir/jenkins-cli/internal/version.BuildTime={{.Date}}
 
+sboms:
+  - artifacts: archive
+    disable: false
+
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
@@ -39,4 +43,3 @@ changelog:
       - "^chore:"
       - Merge pull request
       - Merge branch
-

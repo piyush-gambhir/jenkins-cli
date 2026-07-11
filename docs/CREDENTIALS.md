@@ -591,7 +591,8 @@ Any command annotated as a write operation, including: `job build`, `job create`
 
 ```bash
 # Profile has read_only: true, but you need to trigger one build
-jenkins job build my-pipeline --read-only=false
+# Remove read_only from the profile first, then run:
+jenkins job build my-pipeline
 ```
 
 ---
@@ -791,7 +792,7 @@ If Jenkins has 2FA enabled (via a plugin):
 | `no such host` / `DNS resolution failed` | Hostname cannot be resolved | Check DNS, VPN connection, or use IP address directly |
 | `context deadline exceeded` / `timeout` | Jenkins server is slow or unreachable | Check network connectivity. Increase timeout with `--timeout` for build commands. |
 | `Jenkins URL not configured` | No URL in config, env, or flags | Run `jenkins login` or set `JENKINS_URL` environment variable |
-| `command 'X' is blocked in read-only mode` | Read-only mode is active | Use `--read-only=false` to override, or remove `read_only: true` from your profile |
+| `command 'X' is blocked in read-only mode` | Read-only mode is active | Remove `read_only: true` from the profile or disable the environment setting before permitting writes |
 | `interactive input required but --no-input is set` | Login command with `--no-input` | Use environment variables instead of interactive login |
 
 ### Debugging Authentication Issues

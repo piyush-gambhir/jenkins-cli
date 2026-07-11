@@ -3,10 +3,12 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/piyush-gambhir/jenkins-cli/internal/client"
 	"github.com/piyush-gambhir/jenkins-cli/internal/config"
@@ -57,9 +59,10 @@ Examples:
 			}
 
 			// Prompt token
-			fmt.Print("API Token: ")
-			token, _ := reader.ReadString('\n')
-			token = strings.TrimSpace(token)
+			token, err := readLoginSecret(reader, os.Stdout, "API Token: ")
+			if err != nil {
+				return err
+			}
 			if token == "" {
 				return fmt.Errorf("API token is required")
 			}
@@ -86,6 +89,7 @@ Examples:
 				fmt.Print("Testing connection... ")
 			}
 			c := client.NewClient(profile)
+			c.SetContext(cmd.Context())
 			user, err := c.WhoAmI()
 			if err != nil {
 				if !quietFlag {
@@ -97,19 +101,13 @@ Examples:
 				fmt.Printf("OK (authenticated as %s)\n", user.FullName)
 			}
 
-			// Load config
-			cfg, err := config.Load()
-			if err != nil {
-				return fmt.Errorf("loading config: %w", err)
-			}
-
-			// Save profile
-			config.SetProfile(cfg, profileName, profile)
-			if cfg.CurrentProfile == "" {
-				cfg.CurrentProfile = profileName
-			}
-
-			if err := config.Save(cfg); err != nil {
+			if err := config.Update(func(cfg *config.Config) error {
+				config.SetProfile(cfg, profileName, profile)
+				if cfg.CurrentProfile == "" {
+					cfg.CurrentProfile = profileName
+				}
+				return nil
+			}); err != nil {
 				return fmt.Errorf("saving config: %w", err)
 			}
 
@@ -123,4 +121,15 @@ Examples:
 	cmd.Flags().StringVar(&profileName, "name", "", "Profile name (default: prompted)")
 
 	return cmd
+}
+
+func readLoginSecret(reader *bufio.Reader, out io.Writer, label string) (string, error) {
+	fmt.Fprint(out, label)
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		secret, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Fprintln(out)
+		return strings.TrimSpace(string(secret)), err
+	}
+	secret, err := reader.ReadString('\n')
+	return strings.TrimSpace(secret), err
 }
