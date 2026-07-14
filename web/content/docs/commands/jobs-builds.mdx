@@ -1,0 +1,63 @@
+---
+title: Jobs & builds
+description: Discover and configure jobs, trigger builds, and inspect build runs.
+---
+
+## Find and inspect jobs
+
+Job paths are slash-separated, so `team/services/deploy` addresses a job nested
+inside two folders.
+
+```bash
+jenkins job list
+jenkins job list --folder team --recursive
+jenkins job list --recursive --status FAILURE -o json
+jenkins job get team/services/deploy -o json
+jenkins job config team/services/deploy > config.xml
+```
+
+## Create and configure jobs
+
+```bash
+jenkins job create deploy --from-file config.xml --folder team --if-not-exists
+jenkins job update team/deploy --from-file config.xml
+jenkins job copy team/deploy deploy-copy --folder team
+jenkins job rename team/deploy deploy-production
+jenkins job enable team/deploy
+jenkins job disable team/deploy
+jenkins job wipe-workspace team/deploy --confirm
+jenkins job delete team/deploy --confirm --if-exists
+```
+
+`--from-file -` reads job XML from stdin. `job delete` and `job wipe-workspace`
+require `--confirm`.
+
+## Trigger a build
+
+```bash
+jenkins job build team/deploy
+jenkins job build team/deploy --param BRANCH=main --param ENV=staging
+jenkins job build team/deploy --wait --timeout 1h
+jenkins job build team/deploy --wait --follow
+```
+
+## Inspect and operate builds
+
+```bash
+jenkins build list team/deploy --limit 10 --status FAILURE -o json
+jenkins build get team/deploy 42 -o json
+jenkins build log team/deploy 42 --follow
+jenkins build stages team/deploy 42 -o json
+jenkins build test-report team/deploy 42 -o json
+jenkins build env team/deploy 42 -o yaml
+jenkins build artifacts team/deploy 42 --download --output-dir ./artifacts
+jenkins build stop team/deploy 42
+jenkins build replay team/deploy 42
+jenkins build delete team/deploy 42 --confirm
+jenkins build open team/deploy 42
+```
+
+<Callout type="info">
+  `build env` requires the Environment Injector plugin. `build stages` is for
+  Pipeline jobs and uses the Pipeline Stage View API.
+</Callout>

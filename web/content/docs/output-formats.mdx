@@ -1,0 +1,46 @@
+---
+title: Output formats
+description: Table, JSON, and YAML output, plus raw streams and structured errors.
+---
+
+Use the global `-o` / `--output` flag with structured read commands:
+
+- `-o table` — default, human-readable output
+- `-o json` — JSON for scripts and coding agents
+- `-o yaml` — YAML output
+
+```bash
+jenkins status -o json | jq -r .version
+jenkins job list --recursive -o json | jq '.[].name'
+jenkins build get team/deploy 42 -o yaml
+```
+
+<Callout type="info">
+  **Agents: use `-o json` for structured reads.** If a command fails in JSON
+  mode, stderr receives a JSON object with `error` and, for API failures,
+  `status_code`.
+</Callout>
+
+## Raw-output commands
+
+Some commands intentionally return content rather than a table or object:
+
+```bash
+jenkins job config team/deploy > config.xml
+jenkins build log team/deploy 42 > build.log
+jenkins build log team/deploy 42 --follow
+```
+
+Artifact downloads and browser-opening commands also perform actions rather than
+producing structured records. Write commands may print status messages; use
+`--quiet` when a script does not need those informational lines.
+
+## Useful filters
+
+```bash
+jenkins job list --folder team --recursive --status FAILURE -o json
+jenkins build list team/deploy --status SUCCESS --limit 10 -o json
+jenkins node list --offline -o yaml
+jenkins plugin list --active -o json
+jenkins credential list --type SSH -o json
+```

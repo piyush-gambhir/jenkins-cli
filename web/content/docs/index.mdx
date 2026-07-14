@@ -1,0 +1,39 @@
+---
+title: Introduction
+description: A fast, scriptable command-line interface for Jenkins CI/CD servers.
+---
+
+**Jenkins CLI** is a fast, scriptable command-line interface for **Jenkins** over
+its HTTP API. Manage jobs, builds, nodes, queues, views, plugins, credentials,
+pipelines, users, and system operations from your terminal.
+
+It is designed for both human operators and coding agents. Structured read
+commands support `-o json` and `-o yaml` for machine-readable output.
+
+<Callout type="info">
+  Jenkins CLI is an independent open-source client for Jenkins. It authenticates
+  with your Jenkins username and API token and handles CSRF crumbs automatically.
+</Callout>
+
+## Features
+
+- **Jobs and builds** — discover nested jobs, manage XML configuration, trigger
+  parameterized builds, wait for completion, and follow console output.
+- **Build inspection** — stages, tests, artifacts, environment variables, logs,
+  replay, stop, and delete operations.
+- **Operations** — queues, nodes/agents, views, plugins, credentials, and users.
+- **Pipeline and system administration** — validate declarative Jenkinsfiles,
+  manage input actions, quiet down or restart Jenkins, and run Groovy scripts.
+- **Agent-friendly** — `-o json|yaml`, `--read-only`, `--no-input`, `--quiet`,
+  environment credentials, idempotency flags, and structured JSON errors.
+- **Cross-platform** — prebuilt binaries for macOS and Linux on amd64 and arm64;
+  the Go CLI also supports Windows.
+
+## Next steps
+
+<Cards>
+  <Card title="Installation" href="/docs/installation" description="Install the prebuilt binary or build from source." />
+  <Card title="Authentication" href="/docs/authentication" description="Connect with an API token, profiles, flags, or environment variables." />
+  <Card title="Quick start" href="/docs/quickstart" description="Connect and run your first job and build commands." />
+  <Card title="Agents" href="/docs/agents" description="Structured output, safety flags, and non-interactive use." />
+</Cards>

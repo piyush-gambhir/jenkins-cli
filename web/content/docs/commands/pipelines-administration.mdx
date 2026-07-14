@@ -1,0 +1,65 @@
+---
+title: Pipelines & administration
+description: Validate pipelines and manage plugins, credentials, users, and Jenkins itself.
+---
+
+## Pipelines
+
+```bash
+jenkins pipeline validate --from-file Jenkinsfile
+jenkins pipeline validate --from-file -
+jenkins pipeline input-list team/deploy 42 -o json
+jenkins pipeline input-submit team/deploy 42 approval --param ENV=production
+jenkins pipeline input-abort team/deploy 42 approval
+```
+
+`pipeline validate` uses Jenkins' declarative pipeline model converter. The input
+commands list, approve, or abort pending Pipeline input actions.
+
+## Plugins
+
+```bash
+jenkins plugin list --active -o json
+jenkins plugin get git -o yaml
+jenkins plugin check-updates
+jenkins plugin install git --version 5.7.0 --if-not-exists
+jenkins plugin uninstall git --confirm --if-exists
+```
+
+## Credentials and users
+
+```bash
+jenkins credential list --store system --domain _ --type SSH -o json
+jenkins credential get deploy-key --store system --domain _ -o json
+jenkins credential create --store system --domain _ --from-file credential.xml --if-not-exists
+jenkins credential update deploy-key --store system --domain _ --from-file credential.xml
+jenkins credential delete deploy-key --store system --domain _ --confirm --if-exists
+
+jenkins user list -o json
+jenkins user get admin -o json
+```
+
+## System administration
+
+```bash
+jenkins system info -o json
+jenkins system quiet-down
+jenkins system cancel-quiet-down
+jenkins system restart --safe --confirm
+jenkins system run-script --from-file maintenance.groovy
+jenkins system run-script --script 'println(Jenkins.instance.version)'
+```
+
+## CLI updates
+
+```bash
+jenkins update --check
+jenkins update
+jenkins version
+```
+
+<Callout type="warn">
+  Plugin, credential, and system commands depend on Jenkins permissions; most
+  system operations require `Overall/Administer`. `system run-script` executes
+  Groovy in the Jenkins script console and should be tightly restricted.
+</Callout>

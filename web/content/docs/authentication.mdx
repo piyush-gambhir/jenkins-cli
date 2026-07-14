@@ -1,0 +1,71 @@
+---
+title: Authentication
+description: Connect to Jenkins with a username, API token, profiles, or environment variables.
+---
+
+Jenkins CLI uses HTTP Basic authentication with a **Jenkins username + API
+token**. Configuration priority is **CLI flags > environment variables > named
+profile**.
+
+## Create an API token
+
+In Jenkins, open your user configuration page — typically
+`<jenkins-url>/user/<username>/configure` or `<jenkins-url>/me/configure` — and
+generate a token in the **API Token** section. Copy it when it is shown.
+
+<Callout type="warn">
+  Use an API token, not your Jenkins password. Tokens can be revoked separately
+  and inherit the permissions of the Jenkins user that created them.
+</Callout>
+
+## Interactive login
+
+```bash
+jenkins login
+jenkins login --name production
+```
+
+The command prompts for the Jenkins URL, username, API token, and profile name,
+tests the connection, then saves the profile. Include any Jenkins context path in
+the URL, such as `https://ci.example.com/jenkins`.
+
+## Environment variables
+
+For CI and coding agents, set credentials directly; no `jenkins login` is needed:
+
+```bash
+export JENKINS_URL=https://jenkins.example.com
+export JENKINS_USER=admin
+export JENKINS_TOKEN=11xxxxxxxxxxxxxxxxxx
+jenkins whoami -o json
+```
+
+Recognized connection variables are `JENKINS_URL`, `JENKINS_USER`,
+`JENKINS_TOKEN`, `JENKINS_INSECURE`, and `JENKINS_READ_ONLY`.
+
+## Flags and profiles
+
+```bash
+# One-off connection; nothing is saved
+jenkins status --server https://jenkins.example.com --user admin --token "$JENKINS_TOKEN"
+
+# Select a saved profile
+jenkins status --profile staging
+jenkins job list --profile production -o json
+```
+
+Use `--insecure` (or `JENKINS_INSECURE=true`) only when you must skip TLS
+certificate verification.
+
+## CSRF crumbs
+
+For write requests, the CLI fetches a crumb from `/crumbIssuer/api/json`, caches
+it, and adds the returned crumb header automatically. A `404` from the crumb
+issuer is treated as CSRF protection being disabled, so crumbs require no manual
+configuration.
+
+## Configuration file
+
+Profiles are stored at `~/.config/jenkins-cli/config.yaml`, or under
+`$XDG_CONFIG_HOME/jenkins-cli/config.yaml`. The directory is secured with mode
+`0700` and the file with mode `0600` when saved.

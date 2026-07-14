@@ -1,0 +1,61 @@
+---
+title: Quick start
+description: Connect to Jenkins and run your first job and build commands.
+---
+
+## 1. Authenticate
+
+Create an API token in Jenkins, then start the interactive connection setup:
+
+```bash
+jenkins login
+```
+
+Or configure a non-interactive environment for CI and coding agents:
+
+```bash
+export JENKINS_URL=https://jenkins.example.com
+export JENKINS_USER=admin
+export JENKINS_TOKEN=11xxxxxxxxxxxxxxxxxx
+```
+
+## 2. Confirm connectivity
+
+```bash
+jenkins whoami -o json
+jenkins status -o json
+```
+
+## 3. Discover jobs
+
+Jenkins folders use slash-separated paths such as `team/deploy`:
+
+```bash
+jenkins job list --recursive
+jenkins job list --recursive --status FAILURE -o json
+jenkins job get team/deploy -o yaml
+```
+
+## 4. Trigger and inspect a build
+
+```bash
+jenkins job build team/deploy --param ENV=staging --wait --follow
+jenkins build list team/deploy --limit 10 -o json
+jenkins build get team/deploy 42 -o json
+jenkins build log team/deploy 42
+```
+
+## Discovering commands
+
+Every command has `-h`/`--help`:
+
+```bash
+jenkins --help
+jenkins job --help
+jenkins job build --help
+```
+
+<Cards>
+  <Card title="Output formats" href="/docs/output-formats" description="table, json, yaml, raw output, and structured errors." />
+  <Card title="Commands" href="/docs/commands" description="The command surface, grouped by operational area." />
+</Cards>

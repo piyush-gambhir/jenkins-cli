@@ -1,0 +1,27 @@
+---
+title: Overview
+description: The Jenkins CLI command surface, grouped by operational area.
+---
+
+Every command supports `-h`/`--help`. Structured reads accept `-o json|yaml`,
+and Jenkins folders are addressed with slash-separated job paths.
+
+## Identity and connectivity
+
+```bash
+jenkins whoami -o json
+jenkins status -o json
+```
+
+## Groups
+
+<Cards>
+  <Card title="Jobs & builds" href="/docs/commands/jobs-builds" description="Discover and configure jobs, trigger builds, stream logs, and inspect build results." />
+  <Card title="Nodes, views & queue" href="/docs/commands/nodes-views-queue" description="Operate agents, organize jobs into views, and manage queued builds." />
+  <Card title="Pipelines & administration" href="/docs/commands/pipelines-administration" description="Validate pipelines and manage plugins, credentials, users, and Jenkins itself." />
+</Cards>
+
+<Callout type="info">
+  This is a curated tour. The exhaustive, always-current reference is the CLI's
+  own help output and the agent manual at `docs/llms.txt`.
+</Callout>

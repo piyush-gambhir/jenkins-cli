@@ -1,0 +1,44 @@
+---
+title: Nodes, views & queue
+description: Operate Jenkins agents, organize views, and manage queued builds.
+---
+
+## Nodes and agents
+
+```bash
+jenkins node list -o json
+jenkins node list --offline
+jenkins node get linux-builder -o yaml
+jenkins node log linux-builder
+
+jenkins node create linux-builder --remote-fs /home/jenkins --executors 2 --labels "linux docker" --if-not-exists
+jenkins node disable linux-builder --message "Maintenance"
+jenkins node enable linux-builder
+jenkins node delete linux-builder --confirm --if-exists
+```
+
+## Views
+
+```bash
+jenkins view list -o json
+jenkins view get Deployments -o json
+jenkins view create Deployments --if-not-exists
+jenkins view add-job Deployments team/deploy
+jenkins view remove-job Deployments team/deploy
+jenkins view delete Deployments --confirm --if-exists
+```
+
+The default view type for `view create` is `hudson.model.ListView`; override it
+with `--type <class-name>` when Jenkins supports another view implementation.
+
+## Build queue
+
+```bash
+jenkins queue list -o json
+jenkins queue cancel 123
+```
+
+<Callout type="warn">
+  Node, view, and queue mutations require the corresponding Jenkins permissions.
+  Keep `--read-only` enabled for agents that only inspect operational state.
+</Callout>

@@ -13,11 +13,11 @@ Complete guide for coding agents to manage Jenkins CI/CD servers via the `jenkin
 
 ```bash
 # Using go install
-go install github.com/piyush-gambhir/jenkins-cli@latest
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh
 
 # Or from source
 git clone https://github.com/piyush-gambhir/jenkins-cli.git
-cd jenkins-cli && go build -o jenkins . && sudo mv jenkins /usr/local/bin/
+cd jenkins-cli/cli-go && go build -o jenkins . && sudo mv jenkins /usr/local/bin/
 
 # Or via install script
 curl -sSL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | bash

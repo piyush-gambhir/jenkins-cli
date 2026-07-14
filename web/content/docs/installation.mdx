@@ -1,0 +1,51 @@
+---
+title: Installation
+description: Install the prebuilt Jenkins CLI binary or build it from source.
+---
+
+## Install script (recommended)
+
+Installs the latest prebuilt binary for your OS and architecture — no Go
+toolchain required:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh
+```
+
+Pin a version or change the install directory:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.1 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
+```
+
+<Callout type="info">
+  The install script supports macOS and Linux on amd64 and arm64. It installs to
+  `/usr/local/bin` by default and uses `sudo` only when that directory is not writable.
+</Callout>
+
+## Download a release manually
+
+Prebuilt archives are attached to each
+[GitHub Release](https://github.com/piyush-gambhir/jenkins-cli/releases). Download
+the archive for your platform, extract it, and put `jenkins` on your `PATH`.
+
+The install script expects assets named `jenkins-cli_<os>_<arch>.tar.gz`, where
+`<os>` is `darwin` or `linux` and `<arch>` is `amd64` or `arm64`.
+
+## Build from source
+
+The Go module lives in `cli-go/` and declares Go 1.25 with a Go 1.26.5 toolchain:
+
+```bash
+git clone https://github.com/piyush-gambhir/jenkins-cli.git
+cd jenkins-cli/cli-go && make install
+```
+
+`make install` installs the `jenkins` binary to your Go binary directory.
+
+## Verify
+
+```bash
+jenkins version
+```
