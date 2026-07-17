@@ -1,140 +1,159 @@
-import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { HomeHero } from '@/components/home-hero';
 import { InstallCommand } from '@/components/install-command';
-import { HeroTerminal } from '@/components/hero-terminal';
+import { Reveal } from '@/components/reveal';
 import { SiteFooter } from '@/components/site-footer';
+import { OsmoButton } from '@/components/ui/osmo-button';
 import { site } from '@/lib/site';
+import { siteUrl } from '@/lib/shared';
+import { getOtherSuiteProjects } from '@/lib/suite';
+
+const revealDelays = ['0s', '0.075s', '0.15s'] as const;
+const featureLinks = [
+  '/docs/commands/jobs-builds',
+  '/docs/authentication',
+  '/docs/agents',
+  '/docs/commands/pipelines-administration',
+  '/docs/quickstart',
+  '/docs/commands/nodes-views-queue',
+] as const;
 
 export default function HomePage() {
   const repoUrl = `https://github.com/${site.repo}`;
+  const relatedLink = getOtherSuiteProjects(site.repo).map(({ href }) => href);
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'SoftwareApplication',
+        name: site.name,
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'macOS, Linux',
+        description: site.description,
+        url: siteUrl,
+        downloadUrl: `${repoUrl}/releases`,
+        license: `${repoUrl}/blob/main/LICENSE`,
+        sameAs: repoUrl,
+        relatedLink,
+        featureList: [
+          'Structured JSON and YAML output for coding agents',
+          'Read-only safety mode',
+          'Non-interactive automation flags',
+          'Works with any coding agent or agent harness that can run shell commands',
+        ],
+        keywords:
+          'coding agent, AI agent CLI, agent harness, MCP-free shell integration, terminal automation, jenkins automation',
+      },
+      {
+        '@type': 'WebSite',
+        name: site.name,
+        url: siteUrl,
+        description: site.description,
+        sameAs: repoUrl,
+        relatedLink,
+      },
+    ],
+  };
 
   return (
-    <main className="flex flex-1 flex-col">
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        {/* soft gradient aurora */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div
-            className="absolute left-1/2 top-[-12%] size-[36rem] -translate-x-1/2 rounded-full blur-[80px]"
-            style={{
-              background:
-                'radial-gradient(circle, color-mix(in oklab, var(--color-amber-300) 22%, transparent), transparent 70%)',
-            }}
-          />
-          <div
-            className="absolute right-[8%] top-[4%] size-[22rem] rounded-full blur-[80px]"
-            style={{
-              background:
-                'radial-gradient(circle, color-mix(in oklab, var(--color-sky-400) 18%, transparent), transparent 72%)',
-            }}
-          />
-        </div>
-
-        <div className="mx-auto flex max-w-5xl flex-col items-center px-4 pt-36 pb-20 text-center sm:pt-44">
-          <h1 className="max-w-4xl text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-7xl">
-            {site.tagline}
-          </h1>
-          <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
-            {site.description}
-          </p>
-
-          <div className="mt-9 flex flex-col items-center gap-5">
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button size="lg" render={<Link href="/docs" />}>
-                Get started
-                <ArrowRight className="size-4" />
-              </Button>
-              <Button
-                size="lg"
-                variant="secondary"
-                render={<Link href={repoUrl} />}
-              >
-                View on GitHub
-              </Button>
-            </div>
-            <InstallCommand command={site.installCommand} />
-          </div>
-
-          {/* Signature terminal visual */}
-          <HeroTerminal
-            title={site.exampleTitle}
-            command={site.example}
-            className="mt-16 w-full max-w-3xl text-left"
-          />
-        </div>
-      </section>
+    <main className="osmo-home flex flex-1 flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <HomeHero />
 
       {/* Stack strip */}
       {site.compatible && site.compatible.length > 0 ? (
-        <section className="mx-auto w-full max-w-5xl px-4 py-12">
-          <p className="text-center text-xs font-medium uppercase tracking-widest text-muted-foreground/80">
-            Speaks the language of your stack
-          </p>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
-            {site.compatible.map((item) => (
-              <span
-                key={item}
-                className="font-mono text-sm font-medium text-fd-foreground/60"
-              >
-                {item}
-              </span>
-            ))}
+        <section className="osmo-section">
+          <div className="osmo-container">
+            <Reveal className="compatible-marquee">
+              <div className="compatible-marquee__track">
+                {[false, true].map((hidden) => (
+                  <span
+                    className="compatible-marquee__list"
+                    aria-hidden={hidden || undefined}
+                    key={String(hidden)}
+                  >
+                    {site.compatible?.map((item) => (
+                      <span className="compatible-marquee__item" key={item}>
+                        {item}
+                        <span aria-hidden>{' · '}</span>
+                      </span>
+                    ))}
+                  </span>
+                ))}
+              </div>
+            </Reveal>
           </div>
         </section>
       ) : null}
 
       {/* Features */}
-      <section className="mx-auto w-full max-w-5xl px-4 py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Everything, from one binary
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Built for humans at the keyboard and coding agents alike.
-          </p>
-        </div>
+      <section
+        className="osmo-section osmo-section--features"
+        data-theme-section="dark"
+        aria-labelledby="features-heading"
+      >
+        <div className="osmo-container">
+          <Reveal className="osmo-section__header">
+            <h2 id="features-heading" className="osmo-section__title">
+              {site.featuresTitle ?? 'Everything, from one binary'}
+            </h2>
+            <p className="osmo-home-hero__description">
+              {site.featuresSubtitle ??
+                'Built for humans at the keyboard and coding agents alike.'}
+            </p>
+          </Reveal>
 
-        <div className="mt-16 grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-          {site.features.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="group">
-              <div className="mb-4 flex size-11 items-center justify-center rounded-2xl bg-fd-muted text-fd-foreground transition-colors group-hover:bg-fd-primary group-hover:text-fd-primary-foreground">
-                <Icon className="size-5" />
-              </div>
-              <h3 className="text-base font-semibold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {body}
-              </p>
-            </div>
-          ))}
+          <div className="osmo-card-grid osmo-card-grid--features">
+            {site.features.map(({ title, body }, index) => (
+              <Reveal
+                key={title}
+                delay={revealDelays[index % revealDelays.length]}
+                className="osmo-card osmo-feature-card"
+              >
+                <span className="osmo-eyebrow osmo-card__number">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <h3 className="osmo-card__title">
+                  <Link href={featureLinks[index] ?? '/docs'}>{title}</Link>
+                </h3>
+                <p className="osmo-card__body">{body}</p>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* CTA band */}
-      <section className="mx-auto w-full max-w-5xl px-4 pb-28">
-        <div className="relative overflow-hidden rounded-[2rem] bg-fd-muted/50 px-6 py-20 text-center">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-48"
-            style={{
-              background:
-                'radial-gradient(60% 100% at 50% 0%, color-mix(in oklab, var(--color-amber-200) 40%, transparent), transparent)',
-            }}
-          />
-          <h2 className="mx-auto max-w-xl text-3xl font-semibold tracking-tight sm:text-4xl">
-            Ready in one command
-          </h2>
-          <p className="mx-auto mt-4 max-w-md text-lg text-muted-foreground">
-            Install the binary, authenticate, and start querying. No runtime, no
-            dependencies.
-          </p>
-          <div className="mt-9 flex flex-col items-center gap-5">
-            <InstallCommand command={site.installCommand} />
-            <Button render={<Link href="/docs" />}>
-              Read the docs
-              <ArrowRight className="size-4" />
-            </Button>
-          </div>
+      <section className="osmo-section">
+        <div className="osmo-container">
+          <Reveal className="osmo-section__header mx-auto items-center text-center">
+            <h2 className="osmo-section__title">Ready in one command</h2>
+            <p className="osmo-home-hero__description">
+              {site.ctaBody ?? (
+                <>
+                  <Link href="/docs/installation">Install the binary</Link>,{' '}
+                  <Link href="/docs/authentication">authenticate</Link>, and start
+                  querying. No runtime, no dependencies.
+                </>
+              )}
+            </p>
+            <div className="osmo-home-hero__install">
+              <InstallCommand command={site.installCommand} />
+            </div>
+            <div className="osmo-home-hero__actions">
+              <OsmoButton
+                href="/docs"
+                aria-label="Read the docs"
+                icon={<ArrowRight />}
+              >
+                Read the docs
+              </OsmoButton>
+            </div>
+          </Reveal>
         </div>
       </section>
 

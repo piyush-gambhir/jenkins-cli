@@ -4,8 +4,10 @@ import { baseOptions } from '@/lib/layout.shared';
 
 export default function Layout({ children }: LayoutProps<'/docs'>) {
   return (
-    <DocsLayout tree={source.getPageTree()} {...baseOptions()}>
-      {children}
-    </DocsLayout>
+    <div className="docs-shell">
+      <DocsLayout tree={source.getPageTree()} {...baseOptions()}>
+        {children}
+      </DocsLayout>
+    </div>
   );
 }

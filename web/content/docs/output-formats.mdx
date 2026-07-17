@@ -5,9 +5,9 @@ description: Table, JSON, and YAML output, plus raw streams and structured error
 
 Use the global `-o` / `--output` flag with structured read commands:
 
-- `-o table` — default, human-readable output
-- `-o json` — JSON for scripts and coding agents
-- `-o yaml` — YAML output
+- `-o table`: default, human-readable output
+- `-o json`: JSON for scripts and coding agents
+- `-o yaml`: YAML output
 
 ```bash
 jenkins status -o json | jq -r .version

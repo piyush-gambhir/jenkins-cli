@@ -37,6 +37,16 @@ export interface SiteConfig {
   example: string;
   /** Optional: tech / query languages this CLI speaks (logo strip) */
   compatible?: string[];
+  /** Optional: features section heading (default: "Everything, from one binary") */
+  featuresTitle?: string;
+  /** Optional: features section subheading */
+  featuresSubtitle?: string;
+  /** Optional: CTA band body (default mentions installing the binary) */
+  ctaBody?: string;
+  /** Optional: per-site accent expressed as an OKLCH color */
+  accent?: string;
+  /** Optional: human-readable accent name */
+  accentName?: string;
 }
 
 export const site: SiteConfig = {
@@ -45,8 +55,10 @@ export const site: SiteConfig = {
   repo: 'piyush-gambhir/jenkins-cli',
   tagline: 'Jenkins from your terminal',
   description:
-    'A fast, scriptable CLI for Jenkins. Manage jobs, builds, agents, queues, views, plugins, credentials, pipelines, and system operations — built for humans and coding agents alike.',
+    'An independent, unofficial open-source CLI for Jenkins. Manage jobs, builds, agents, queues, views, plugins, credentials, pipelines, and system operations, built for humans and coding agents alike.',
   badge: 'Open-source · Agent-friendly',
+  accent: 'oklch(0.71 0.16 30)',
+  accentName: 'coral',
   installCommand:
     'curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh',
   features: [
