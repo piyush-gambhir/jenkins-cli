@@ -6,21 +6,21 @@ import { site } from '@/lib/site';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const fontBuffer = async (name: string) => {
-  const data = await readFile(join(process.cwd(), 'fonts', name));
+const fontBuffer = async (...fontPath: string[]) => {
+  const data = await readFile(join(process.cwd(), 'node_modules', ...fontPath));
   return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 };
 
 export const revalidate = false;
 
-const haffer = fontBuffer('haffer-xh-regular-2.ttf');
-const hafferMono = fontBuffer('haffer-mono-medium-2.ttf');
+const inter = fontBuffer('@fontsource', 'inter', 'files', 'inter-latin-400-normal.woff');
+const jetbrainsMono = fontBuffer('@fontsource', 'jetbrains-mono', 'files', 'jetbrains-mono-latin-500-normal.woff');
 
 export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...slug]'>) {
   const { slug } = await params;
   const page = source.getPage(slug.slice(0, -1));
   if (!page) notFound();
-  const [hafferData, hafferMonoData] = await Promise.all([haffer, hafferMono]);
+  const [interData, jetbrainsMonoData] = await Promise.all([inter, jetbrainsMono]);
 
   return new ImageResponse(
     <div
@@ -33,7 +33,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
         padding: '68px 76px',
         color: '#f3f4f1',
         background: '#131412',
-        fontFamily: 'Haffer',
+        fontFamily: 'Inter',
       }}
     >
       <div
@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
           display: 'flex',
           alignItems: 'center',
           color: site.accent,
-          fontFamily: 'Haffer Mono',
+          fontFamily: 'JetBrains Mono',
           fontSize: 24,
           letterSpacing: '0.08em',
         }}
@@ -68,7 +68,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
           display: 'flex',
           justifyContent: 'space-between',
           color: '#7f827b',
-          fontFamily: 'Haffer Mono',
+          fontFamily: 'JetBrains Mono',
           fontSize: 20,
         }}
       >
@@ -80,8 +80,8 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
       width: 1200,
       height: 630,
       fonts: [
-        { name: 'Haffer', data: hafferData, weight: 400 },
-        { name: 'Haffer Mono', data: hafferMonoData, weight: 500 },
+        { name: 'Inter', data: interData, weight: 400 },
+        { name: 'JetBrains Mono', data: jetbrainsMonoData, weight: 500 },
       ],
     },
   );
