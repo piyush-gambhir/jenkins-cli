@@ -4,47 +4,42 @@ import '@fontsource-variable/jetbrains-mono';
 import '@fontsource/instrument-serif';
 import type { CSSProperties } from 'react';
 import { Provider } from '@/components/provider';
-import { siteMetadataDescription } from '@/lib/metadata';
+import { homeSocialImage, siteMetadataDescription } from '@/lib/metadata';
 import { site } from '@/lib/site';
 import { siteUrl } from '@/lib/shared';
 import './global.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  applicationName: site.name,
   title: {
-    default: `${site.name} | ${site.tagline}`,
+    default: `${site.name}: ${site.tagline}`,
     template: `%s · ${site.name}`,
   },
   description: siteMetadataDescription,
-  alternates: { canonical: siteUrl },
-  icons: { icon: '/jenkins-cli/favicon.svg' },
+  authors: [{ name: 'Piyush Gambhir', url: 'https://github.com/piyush-gambhir' }],
+  creator: 'Piyush Gambhir',
+  publisher: 'Piyush Gambhir',
+  alternates: {
+    canonical: siteUrl,
+  },
+  icons: {
+    icon: [{ url: '/jenkins-cli/favicon.svg', type: 'image/svg+xml' }],
+  },
   openGraph: {
     type: 'website',
+    locale: 'en_US',
     url: siteUrl,
     siteName: site.name,
-    title: `${site.name} | ${site.tagline}`,
+    title: `${site.name}: ${site.tagline}`,
     description: siteMetadataDescription,
-    images: [
-      {
-        url: `${siteUrl}/og/docs/image.png`,
-        width: 1200,
-        height: 630,
-        alt: `${site.name}: ${site.tagline}`,
-      },
-    ],
+    images: [homeSocialImage],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${site.name} | ${site.tagline}`,
+    title: `${site.name}: ${site.tagline}`,
     description: siteMetadataDescription,
-    images: [
-      {
-        url: `${siteUrl}/og/docs/image.png`,
-        width: 1200,
-        height: 630,
-        alt: `${site.name}: ${site.tagline}`,
-      },
-    ],
+    images: [homeSocialImage],
   },
 };
 

@@ -47,6 +47,8 @@ export interface SiteConfig {
   accent?: string;
   /** Optional: human-readable accent name */
   accentName?: string;
+  /** Optional: hex twin of the accent, for surfaces without oklch() support (OG images) */
+  accentHex?: string;
 }
 
 export const site: SiteConfig = {
@@ -59,6 +61,7 @@ export const site: SiteConfig = {
   badge: 'Open-source · Agent-friendly',
   accent: 'oklch(0.71 0.16 30)',
   accentName: 'coral',
+  accentHex: '#f57663',
   installCommand:
     'curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh',
   features: [
