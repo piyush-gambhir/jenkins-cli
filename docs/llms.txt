@@ -43,10 +43,12 @@ curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/ins
 
 The script auto-detects OS (`linux`/`darwin`) and architecture (`amd64`/`arm64`), downloads the matching release tarball, verifies dependencies (`curl`, `tar`), and installs the binary (using `sudo` only if the target directory is not writable).
 
-### go install
+### Build from source
 
 ```bash
-go install github.com/piyush-gambhir/jenkins-cli@latest
+git clone https://github.com/piyush-gambhir/jenkins-cli.git
+cd jenkins-cli/cli-go
+make install
 ```
 
 ### From source
@@ -59,7 +61,7 @@ sudo mv jenkins /usr/local/bin/
 
 # Or use the Makefile (injects version/commit/build-time):
 make build      # builds ./bin/jenkins
-make install    # go install with ldflags
+make install    # build and install the named binary with version metadata
 ```
 
 ### From GitHub Releases

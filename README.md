@@ -41,22 +41,19 @@ You can also download a prebuilt archive for your platform directly from
 [GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
 place the `jenkins` binary in your `PATH`.
 
-### Alternative (requires Go)
+### Build from source
 
-Using `go install`:
-
-```bash
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh
-```
-
-From source:
+Requires Go 1.26 or later; Go 1.27.1 is recommended.
 
 ```bash
 git clone https://github.com/piyush-gambhir/jenkins-cli.git
 cd jenkins-cli/cli-go
-go build -o jenkins .
-sudo mv jenkins /usr/local/bin/
+make install
 ```
+
+`make install` writes the correctly named executable to `go env GOBIN`, or to
+`$(go env GOPATH)/bin` when GOBIN is unset. Use `make install INSTALL_DIR=...`
+to select a different directory.
 
 ## Quick Start
 
@@ -1163,3 +1160,7 @@ Once installed, coding agents automatically know how to use this CLI effectively
 ## License
 
 MIT
+
+## Compatibility and maintenance
+
+See [build requirements and upstream API compatibility](docs/COMPATIBILITY.md) for the checked API baseline and dependency update workflow.
