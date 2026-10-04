@@ -5,7 +5,7 @@ dist/
 jenkins-cli
 *.exe
 
-# Cloudflare Pages local cache
+# Wrangler local cache
 .wrangler/
 
 # env
