@@ -59,6 +59,8 @@ jenkins whoami -o json     # Authenticated user info
 
 - **Destructive operations require `--confirm`** -- deleting jobs, builds, nodes, views, plugins, and credentials all require the `--confirm` flag.
 
+- **The update notice never reaches agent output.** It prints on stderr only in interactive terminals, at most once a day, and is off when stderr is not a terminal, `CI` is set, or `JENKINS_NO_UPDATE_NOTIFIER=1` / `NO_UPDATE_NOTIFIER=1` is set. To update deliberately: `jenkins update --check -o json` reports, `jenkins update --yes` installs (macOS, Linux, Windows).
+
 - **Credentials use `--store` and `--domain`** -- defaults are `system` and `_` (global). Credential and job configs use Jenkins XML format, not JSON.
 
 - **`pipeline validate` only works with declarative pipelines** -- scripted pipelines cannot be validated.

@@ -7,6 +7,7 @@
 - **Env vars:** `JENKINS_URL`, `JENKINS_USER`, `JENKINS_TOKEN`, `JENKINS_INSECURE`
 - **Auth method:** Username + API token (not password; generate at `<jenkins-url>/user/<username>/configure`)
 - **Config priority:** CLI flags > environment variables > profile config
+- **Updates:** `jenkins update --yes` installs the latest release (macOS, Linux, Windows); `jenkins update --check -o json` only reports. The once-a-day update notice prints on stderr only in interactive terminals; it is off when stderr is not a terminal, `CI` is set, `JENKINS_NO_UPDATE_NOTIFIER=1` or `NO_UPDATE_NOTIFIER=1` is set, or `--quiet` is on.
 
 ## Setup
 
@@ -380,8 +381,8 @@ jenkins pipeline input-submit team/deploy-pipeline 42 deploy-approval --param AP
 | `jenkins login` | Interactively authenticate with a Jenkins server |
 | `jenkins status` | Show Jenkins server status |
 | `jenkins whoami` | Show current authenticated user |
-| `jenkins version` | Print CLI version |
-| `jenkins update` | Check for and install CLI updates |
+| `jenkins version` | Print CLI version (plus the cached latest release, if known) |
+| `jenkins update` | Check for and install CLI updates (`--check`, `-y/--yes`; macOS, Linux, Windows) |
 
 ### `jenkins job` (alias: `jobs`) -- Manage jobs
 

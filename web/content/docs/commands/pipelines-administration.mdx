@@ -54,15 +54,17 @@ jenkins system run-script --script 'println(Jenkins.instance.version)'
 
 ```bash
 jenkins update --check
+jenkins update --check -o json
 jenkins update
+jenkins update --yes
 jenkins version
 ```
 
-On Windows, use `jenkins update --check`. Plain `jenkins update` will not install
-and exits with an error that links the release. Download
-`jenkins-cli_windows_amd64.zip` from
-[GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
-replace `jenkins.exe` with the one inside.
+`jenkins update` works on macOS, Linux, and Windows. `--check` only reports;
+`--yes` installs without the `Update now? [Y/n]` prompt. `jenkins version` shows
+the latest release from the last cached check without contacting GitHub. The
+Updating section of the Installation page explains how the binary is replaced and
+how to turn off the update notice.
 
 <Callout type="warn">
   Plugin, credential, and system commands depend on Jenkins permissions; most

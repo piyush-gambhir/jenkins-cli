@@ -386,6 +386,7 @@ Environment variables override config file values. CLI flags override environmen
 | `JENKINS_READ_ONLY` | Block write operations | `true` or `false` |
 | `JENKINS_NO_INPUT` | Disable interactive prompts | `true` or `1` |
 | `JENKINS_QUIET` | Suppress informational output | `true` or `1` |
+| `JENKINS_NO_UPDATE_NOTIFIER` | Turn off the update notice (so do `NO_UPDATE_NOTIFIER` and `CI`) | any non-empty value |
 | `XDG_CONFIG_HOME` | Override config directory base | `/custom/config/path` |
 
 **Priority order (highest to lowest):**

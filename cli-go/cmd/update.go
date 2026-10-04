@@ -1,324 +1,204 @@
 package cmd
 
 import (
-	"archive/tar"
 	"bufio"
-	"compress/gzip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
+	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/output"
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/update"
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/version"
 )
 
-// Seams for tests: goos selects the platform-specific install path and
-// checkForUpdate avoids calling the GitHub API.
+type releaseInstaller interface {
+	Install(ctx context.Context, version string) error
+}
+
+// Seams for tests: they keep update off the GitHub API, the real executable,
+// and the real terminal.
 var (
-	goos           = runtime.GOOS
-	checkForUpdate = update.CheckForUpdate
+	checkForUpdate  = update.CheckForUpdate
+	installMethod   = update.CurrentInstallMethod
+	executablePath  = update.ExecutablePath
+	newInstaller    = func(execPath string) releaseInstaller { return update.NewInstaller(execPath) }
+	stdinIsTerminal = func() bool { return term.IsTerminal(int(os.Stdin.Fd())) }
 )
 
+// updateCheckResult is the `update --check` output.
+type updateCheckResult struct {
+	CurrentVersion  string `json:"current_version" yaml:"current_version"`
+	LatestVersion   string `json:"latest_version" yaml:"latest_version"`
+	UpdateAvailable bool   `json:"update_available" yaml:"update_available"`
+	ReleaseURL      string `json:"release_url" yaml:"release_url"`
+	InstallMethod   string `json:"install_method" yaml:"install_method"`
+}
+
 func newUpdateCmd() *cobra.Command {
-	var checkOnly bool
+	var checkOnly, yes bool
 
 	cmd := &cobra.Command{
 		Use:         "update",
 		Annotations: map[string]string{"mutates": "true"},
 		Short:       "Update jenkins to the latest version",
-		Long: `Check for and install the latest version of the Jenkins CLI from GitHub Releases.
+		Long: `Check for and install the latest release of the Jenkins CLI from GitHub
+Releases on macOS, Linux, and Windows.
 
-On Windows, only --check is supported: download the Windows .zip from the
-release page and replace jenkins.exe yourself.`,
+The release archive is verified against the release's checksums.txt (SHA-256)
+before the running binary is replaced. Any failure leaves the current binary
+in place. If the binary's directory is not writable, re-run with sudo (or as
+Administrator on Windows), or reinstall into a directory you can write to.
+A binary in a Go bin directory ($GOBIN, $GOPATH/bin, ~/go/bin) was built from
+source and is not replaced; update it with "git pull && make install" in your
+jenkins-cli/cli-go checkout instead.
+
+--check always queries GitHub and only reports; -o json prints
+current_version, latest_version, update_available, release_url, and
+install_method (self or go). --read-only blocks installing but allows --check.
+
+Update notice: in an interactive terminal, other commands check GitHub at
+most once a day in the background and print a short notice on stderr when a
+new release exists (at most once a day per release). The check is skipped
+when stderr is not a terminal, CI is set, JENKINS_NO_UPDATE_NOTIFIER or
+NO_UPDATE_NOTIFIER is set, or --quiet / JENKINS_QUIET is on.
+
+Examples:
+  jenkins update               # ask, then install the latest release
+  jenkins update --yes         # install without asking
+  jenkins update --check       # report only
+  jenkins update --check -o json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			repo := "piyush-gambhir/jenkins-cli"
-			currentVersion := version.Version
+			out := cmd.OutOrStdout()
+			format, err := output.ParseFormat(outputFormat)
+			if err != nil {
+				return err
+			}
+			// PersistentPreRunE skips loadConfig for update; main.go reads this
+			// to format errors.
+			OutputFormat = outputFormat
 
-			if currentVersion == "dev" {
-				return fmt.Errorf("cannot update a dev build. Install a release version from https://github.com/%s/releases", repo)
+			current := update.NormalizeVersion(version.Version)
+			if !update.IsReleaseVersion(current) {
+				return fmt.Errorf("cannot update a dev build (version %q); install a release from https://github.com/%s/releases", version.Version, update.Repo)
+			}
+			if !checkOnly {
+				readOnly, err := readOnlyEnabled()
+				if err != nil {
+					return err
+				}
+				if readOnly {
+					return readOnlyError(cmd)
+				}
 			}
 
-			fmt.Fprint(os.Stderr, "Checking for updates... ")
-			info, err := checkForUpdate(currentVersion, repo, config.ConfigDir(), true)
+			info, err := checkForUpdate(current, config.ConfigDir(), true)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "")
 				return fmt.Errorf("checking for updates: %w", err)
 			}
-			fmt.Fprintln(os.Stderr, "done.")
-
-			if !info.Available {
-				fmt.Printf("Already up to date (v%s)\n", currentVersion)
-				return nil
-			}
-
-			fmt.Printf("Update available: v%s → v%s\n", info.CurrentVersion, info.LatestVersion)
-			if info.ReleaseURL != "" {
-				fmt.Printf("Release: %s\n", info.ReleaseURL)
-			}
+			method := installMethod()
 
 			if checkOnly {
-				return nil
+				return printUpdateCheck(out, format, info, method)
 			}
-			// Windows releases ship as a .zip, and a running .exe cannot be
-			// renamed over, so point the user at the release page instead.
-			if goos == "windows" {
-				return fmt.Errorf("self-update is not supported on Windows: download the Windows .zip from https://github.com/%s/releases/tag/v%s and replace jenkins.exe with the one inside", repo, info.LatestVersion)
-			}
-			if noInputFlag {
-				return fmt.Errorf("update requires confirmation; cannot run with --no-input (use --check to check only)")
-			}
-
-			// Ask for confirmation
-			fmt.Printf("\nDo you want to update? [y/N] ")
-			var response string
-			fmt.Scanln(&response)
-			response = strings.TrimSpace(strings.ToLower(response))
-			if response != "y" && response != "yes" {
-				fmt.Println("Update cancelled.")
+			if !info.Available {
+				fmt.Fprintf(out, "jenkins v%s is already the latest version.\n", current)
 				return nil
 			}
 
-			// Determine download URL
-			osName := goos
-			archName := runtime.GOARCH
-			archive := fmt.Sprintf("jenkins-cli_%s_%s.tar.gz", osName, archName)
-			downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/%s",
-				repo, info.LatestVersion, archive)
+			fmt.Fprintf(out, "Update available: v%s -> v%s\n", current, info.LatestVersion)
+			if method == update.InstallGo {
+				fmt.Fprintf(out, "This jenkins was built from source into a Go bin directory, so it is not replaced in place.\nUpdate with: %s\nRelease notes: %s\n", update.SourceUpdateCommand, info.ReleaseURL)
+				return nil
+			}
+			if !yes {
+				if noInputFlag {
+					return errors.New("update needs confirmation and --no-input is set: pass --yes to install")
+				}
+				if !stdinIsTerminal() {
+					return errors.New("update needs confirmation and stdin is not a terminal: pass --yes to install")
+				}
+				fmt.Fprint(cmd.ErrOrStderr(), "Update now? [Y/n] ")
+				answer, readErr := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
+				answer = strings.ToLower(strings.TrimSpace(answer))
+				// Ctrl-D (EOF with no answer) cancels; only Enter means yes.
+				if (readErr != nil && answer == "") || (answer != "" && answer != "y" && answer != "yes") {
+					fmt.Fprintln(out, "Update cancelled.")
+					return nil
+				}
+			}
 
-			// Find current binary path
-			execPath, err := os.Executable()
+			execPath, err := executablePath()
 			if err != nil {
-				return fmt.Errorf("finding current binary: %w", err)
+				return err
 			}
-			execPath, err = filepath.EvalSymlinks(execPath)
-			if err != nil {
-				return fmt.Errorf("resolving binary path: %w", err)
+			if !quietFlag {
+				fmt.Fprintf(cmd.ErrOrStderr(), "Downloading v%s...\n", info.LatestVersion)
 			}
-
-			fmt.Printf("Downloading v%s...\n", info.LatestVersion)
-
-			// Download to temp directory
-			tmpDir, err := os.MkdirTemp("", "jenkins-cli-update-*")
-			if err != nil {
-				return fmt.Errorf("creating temp directory: %w", err)
+			if err := newInstaller(execPath).Install(cmd.Context(), info.LatestVersion); err != nil {
+				return fmt.Errorf("installing v%s: %w", info.LatestVersion, err)
 			}
-			defer os.RemoveAll(tmpDir)
-
-			archivePath := filepath.Join(tmpDir, archive)
-			if err := downloadFile(cmd.Context(), downloadURL, archivePath); err != nil {
-				return fmt.Errorf("downloading update: %w", err)
-			}
-
-			// Download and verify SHA256 checksum
-			checksumsURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/checksums.txt",
-				repo, info.LatestVersion)
-			checksumsPath := filepath.Join(tmpDir, "checksums.txt")
-			if err := downloadFile(cmd.Context(), checksumsURL, checksumsPath); err != nil {
-				return fmt.Errorf("downloading checksums: %w", err)
-			}
-
-			expectedHash, err := parseChecksum(checksumsPath, archive)
-			if err != nil {
-				return fmt.Errorf("reading checksums: %w", err)
-			}
-
-			actualHash, err := sha256File(archivePath)
-			if err != nil {
-				return fmt.Errorf("computing checksum: %w", err)
-			}
-
-			if !strings.EqualFold(actualHash, expectedHash) {
-				return fmt.Errorf("checksum mismatch for %s:\n  expected: %s\n  actual:   %s\nThe downloaded file may be corrupted or tampered with.", archive, expectedHash, actualHash)
-			}
-			fmt.Fprintln(os.Stderr, "Checksum verified.")
-
-			// Extract binary from tar.gz
-			fmt.Println("Extracting...")
-			binaryPath := filepath.Join(tmpDir, "jenkins")
-			if err := extractBinary(archivePath, binaryPath); err != nil {
-				return fmt.Errorf("extracting update: %w", err)
-			}
-
-			// Check if we can write to the destination
-			fmt.Printf("Installing to %s...\n", execPath)
-
-			// Get permissions of the existing binary
-			existingStat, err := os.Stat(execPath)
-			if err != nil {
-				return fmt.Errorf("checking binary permissions: %w", err)
-			}
-
-			// Try atomic replace: rename new binary over old one.
-			// First, copy to a temp file in the same directory as the target
-			// (rename only works within the same filesystem).
-			targetDir := filepath.Dir(execPath)
-			tmpBin, err := os.CreateTemp(targetDir, ".jenkins-update-*")
-			if err != nil {
-				// If we can't write to the target directory, suggest sudo
-				return fmt.Errorf("cannot write to %s: %w\nTry: sudo jenkins update", targetDir, err)
-			}
-			tmpBinPath := tmpBin.Name()
-
-			// Copy new binary to temp location in target dir
-			src, err := os.Open(binaryPath)
-			if err != nil {
-				os.Remove(tmpBinPath)
-				return fmt.Errorf("opening new binary: %w", err)
-			}
-
-			if err := copyUpdatePayload(tmpBin, src); err != nil {
-				src.Close()
-				tmpBin.Close()
-				os.Remove(tmpBinPath)
-				return fmt.Errorf("copying new binary: %w", err)
-			}
-			src.Close()
-			tmpBin.Close()
-
-			// Set permissions to match the original binary
-			if err := os.Chmod(tmpBinPath, existingStat.Mode()); err != nil {
-				os.Remove(tmpBinPath)
-				return fmt.Errorf("setting permissions: %w", err)
-			}
-
-			// Atomic rename
-			if err := os.Rename(tmpBinPath, execPath); err != nil {
-				os.Remove(tmpBinPath)
-				return fmt.Errorf("replacing binary: %w\nTry: sudo jenkins update", err)
-			}
-
-			fmt.Printf("Successfully updated jenkins to v%s\n", info.LatestVersion)
+			update.ClearCache(config.ConfigDir())
+			fmt.Fprintf(out, "Updated jenkins v%s -> v%s\nRelease notes: %s\n", current, info.LatestVersion, info.ReleaseURL)
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&checkOnly, "check", false, "Only check if an update is available, don't install")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Install without asking for confirmation")
 
 	return cmd
 }
 
-// downloadFile downloads a URL to a local file.
-func downloadFile(ctx context.Context, url, dest string) error {
-	client := &http.Client{
-		Timeout: 120 * time.Second,
+func printUpdateCheck(w io.Writer, format output.Format, info *update.UpdateInfo, method string) error {
+	result := updateCheckResult{
+		CurrentVersion:  info.CurrentVersion,
+		LatestVersion:   info.LatestVersion,
+		UpdateAvailable: info.Available,
+		ReleaseURL:      info.ReleaseURL,
+		InstallMethod:   method,
 	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
+	if format != output.FormatTable {
+		return output.Print(w, format, result, nil)
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
+	available := "no"
+	if info.Available {
+		available = "yes"
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download returned status %d for %s", resp.StatusCode, url)
+	fmt.Fprintf(w, "Current version:  v%s\nLatest version:   v%s\nUpdate available: %s\nRelease notes:    %s\n",
+		info.CurrentVersion, info.LatestVersion, available, info.ReleaseURL)
+	if info.Available {
+		updateCmd := "jenkins update"
+		if method == update.InstallGo {
+			updateCmd = update.SourceUpdateCommand
+		}
+		fmt.Fprintf(w, "Update with:      %s\n", updateCmd)
 	}
-
-	out, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	err = copyUpdatePayload(out, resp.Body)
-	return err
+	return nil
 }
 
-// extractBinary extracts the "jenkins" binary from a tar.gz archive.
-func extractBinary(archivePath, destPath string) error {
-	f, err := os.Open(archivePath)
+// readOnlyEnabled resolves read-only mode for commands that skip the normal
+// auth bootstrap: the --read-only flag, JENKINS_READ_ONLY, or the profile. It
+// fails closed: if the config or profile cannot be resolved, the caller must
+// not write.
+func readOnlyEnabled() (bool, error) {
+	if readOnlyFlag {
+		return true, nil
+	}
+	c, err := config.Load()
 	if err != nil {
-		return err
+		return false, fmt.Errorf("loading config to check read-only mode: %w", err)
 	}
-	defer f.Close()
-
-	gz, err := gzip.NewReader(f)
+	profile, err := config.ResolveAuth(config.FlagValues{}, os.LookupEnv, c, profileFlag)
 	if err != nil {
-		return fmt.Errorf("opening gzip: %w", err)
+		return false, fmt.Errorf("resolving profile to check read-only mode: %w", err)
 	}
-	defer gz.Close()
-
-	tr := tar.NewReader(gz)
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("reading tar: %w", err)
-		}
-
-		// Look for the jenkins binary (could be at root or in a subdirectory)
-		name := filepath.Base(header.Name)
-		if name == "jenkins" && header.Typeflag == tar.TypeReg {
-			out, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
-			if err != nil {
-				return err
-			}
-			if err := copyUpdatePayload(out, tr); err != nil {
-				out.Close()
-				return err
-			}
-			out.Close()
-			return nil
-		}
-	}
-
-	return fmt.Errorf("binary 'jenkins' not found in archive")
-}
-
-// parseChecksum reads a GoReleaser checksums.txt and returns the SHA256 hash
-// for the given filename. Format: "<hash>  <filename>"
-func parseChecksum(checksumsPath, filename string) (string, error) {
-	f, err := os.Open(checksumsPath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// GoReleaser format: "hash  filename" (two spaces)
-		parts := strings.Fields(line)
-		if len(parts) == 2 && parts[1] == filename {
-			return parts[0], nil
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-
-	return "", fmt.Errorf("checksum for %s not found in checksums.txt", filename)
-}
-
-// sha256File computes the SHA256 hash of a file and returns the hex string.
-func sha256File(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	h := sha256.New()
-	if err := copyUpdatePayload(h, f); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(h.Sum(nil)), nil
+	return profile.ReadOnly, nil
 }
