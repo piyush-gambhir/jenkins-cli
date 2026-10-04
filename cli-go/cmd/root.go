@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/client"
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
@@ -40,7 +43,8 @@ var (
 	// during PersistentPreRunE so that main.go error handling can use it.
 	OutputFormat string
 
-	// Update check channel (replaces sync.Mutex pattern)
+	// updateResult receives the update check result for this run; nil when
+	// the notifier is suppressed.
 	updateResult chan *update.UpdateInfo
 )
 
@@ -74,14 +78,19 @@ Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenki
 			quietFlag = envFlagEnabled("JENKINS_QUIET")
 		}
 
-		// Start background update check for commands that should show it
-		cmdName := cmd.Name()
-		if cmdName != "update" && cmdName != "version" {
-			startBackgroundUpdateCheck()
+		if runtime.GOOS == "windows" {
+			if execPath, err := update.ExecutablePath(); err == nil {
+				update.RemoveOldBinary(runtime.GOOS, execPath)
+			}
 		}
 
+		// Match on the command directly under the root, so `job update` is
+		// not mistaken for `update`.
+		topName := topLevelName(cmd)
+		startUpdateCheck(topName)
+
 		// Skip auth for commands that don't need it
-		if cmdName == "version" || cmdName == "help" || cmdName == "login" || cmdName == "update" {
+		if skipsAuth(topName) {
 			return nil
 		}
 		// Also skip for parent commands (they have subcommands)
@@ -109,26 +118,7 @@ Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenki
 		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-		// Wait for background update check and print notice if available.
-		// Skip for update and version commands.
-		cmdName := cmd.Name()
-		if cmdName == "update" || cmdName == "version" {
-			return nil
-		}
-
-		if updateResult == nil {
-			return nil
-		}
-
-		select {
-		case info := <-updateResult:
-			if info != nil && info.Available {
-				update.PrintUpdateNotice(os.Stderr, info)
-			}
-		case <-time.After(2 * time.Second):
-			// Don't block the user if the update check is slow
-		}
-
+		printUpdateNotice(cmd.ErrOrStderr())
 		return nil
 	},
 	SilenceUsage:  true,
@@ -140,19 +130,63 @@ func envFlagEnabled(name string) bool {
 	return strings.EqualFold(v, "true") || v == "1"
 }
 
-// startBackgroundUpdateCheck launches a goroutine to check for updates using
-// the 24h cache so it doesn't slow down normal command execution.
-func startBackgroundUpdateCheck() {
-	updateResult = make(chan *update.UpdateInfo, 1)
+// topLevelName returns the name of the command directly under the root.
+func topLevelName(cmd *cobra.Command) string {
+	for cmd.HasParent() && cmd.Parent().HasParent() {
+		cmd = cmd.Parent()
+	}
+	return cmd.Name()
+}
+
+// skipsAuth reports whether a top-level command runs without a Jenkins
+// server: it must not need config, credentials, or the client.
+func skipsAuth(topName string) bool {
+	switch topName {
+	case "version", "help", "login", "update", "completion":
+		return true
+	}
+	return strings.HasPrefix(topName, "__complete")
+}
+
+// stderrIsTerminal is a seam for tests.
+var stderrIsTerminal = func() bool { return term.IsTerminal(int(os.Stderr.Fd())) }
+
+// startUpdateCheck prepares the update notice for this run, unless the
+// notifier is suppressed (then nothing touches the cache or the network). A
+// fresh cached result is used directly; otherwise GitHub is queried in the
+// background so the command never waits for it.
+func startUpdateCheck(topName string) {
+	updateResult = nil
+	if !update.NotifierEnabled(os.Getenv, stderrIsTerminal(), quietFlag, version.Version, topName) {
+		return
+	}
+	result := make(chan *update.UpdateInfo, 1)
+	updateResult = result
+	current, configDir := version.Version, config.ConfigDir()
+	if info, ok := update.FreshCache(current, configDir); ok {
+		result <- info
+		return
+	}
+	check := checkForUpdate
 	go func() {
-		info, _ := update.CheckForUpdate(
-			version.Version,
-			"piyush-gambhir/jenkins-cli",
-			config.ConfigDir(),
-			false,
-		)
-		updateResult <- info
+		info, _ := check(current, configDir, false)
+		result <- info
 	}()
+}
+
+// printUpdateNotice prints the update notice if the check has already
+// finished. It never waits: a check still in flight is simply not shown.
+func printUpdateNotice(w io.Writer) {
+	if updateResult == nil {
+		return
+	}
+	select {
+	case info := <-updateResult:
+		if info != nil && info.Available {
+			update.MaybeNotify(w, info, config.ConfigDir(), installMethod(), time.Now())
+		}
+	default:
+	}
 }
 
 // loadConfig loads the configuration and parses the output format.
@@ -225,10 +259,14 @@ func checkPermissions(cmd *cobra.Command, profile *config.Profile) error {
 		effectiveReadOnly = true
 	}
 	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
-		return fmt.Errorf("command '%s' is blocked in read-only mode; remove read_only from the profile or disable the read-only environment setting to permit writes", cmd.CommandPath())
+		return readOnlyError(cmd)
 	}
 
 	return nil
+}
+
+func readOnlyError(cmd *cobra.Command) error {
+	return fmt.Errorf("command '%s' is blocked in read-only mode; remove read_only from the profile or disable the read-only environment setting to permit writes", cmd.CommandPath())
 }
 
 // RootCmd returns the root cobra.Command for use in main.go.

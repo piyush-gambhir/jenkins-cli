@@ -56,7 +56,8 @@ jenkins whoami -o json
 
 ### `jenkins version`
 
-Print the CLI version.
+Print the CLI version. When an earlier update check cached the latest release,
+also print `latest` and `update_available` (never contacts GitHub).
 
 ```bash
 jenkins version
@@ -64,17 +65,26 @@ jenkins version
 
 ### `jenkins update`
 
-Check for and install CLI updates. On Windows only `--check` works: download the
-release `.zip` and replace `jenkins.exe` manually.
+Check for and install CLI updates on macOS, Linux, and Windows. The release
+archive is verified against `checksums.txt` (SHA-256) before the binary is
+replaced; any failure leaves the current binary in place. A binary in a Go bin
+directory was built from source and is not replaced: run `git pull && make install`
+in the `jenkins-cli/cli-go` checkout. `--read-only` blocks installing, not `--check`.
 
 ```bash
-jenkins update
-jenkins update --check
+jenkins update                  # ask, then install
+jenkins update --yes            # install without asking
+jenkins update --check -o json  # current_version, latest_version, update_available, release_url, install_method
 ```
 
 | Flag | Description |
 |---|---|
 | `--check` | Only check for updates, don't install |
+| `-y, --yes` | Install without asking for confirmation |
+
+In interactive terminals other commands print a once-a-day update notice on
+stderr. It is off when stderr is not a terminal, `CI` is set, or
+`JENKINS_NO_UPDATE_NOTIFIER=1` / `NO_UPDATE_NOTIFIER=1` is set.
 
 ---
 

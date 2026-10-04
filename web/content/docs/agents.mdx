@@ -29,6 +29,11 @@ It works with Claude Code, OpenAI Codex, Cursor, or any coding agent harness tha
 JENKINS_READ_ONLY=true JENKINS_NO_INPUT=1 jenkins job list --recursive -o json
 ```
 
+The update notice never reaches agents: it prints on stderr only when stderr is
+an interactive terminal, and is also off when `CI`, `JENKINS_NO_UPDATE_NOTIFIER`,
+or `NO_UPDATE_NOTIFIER` is set. Use `jenkins update --check -o json` to check and
+`jenkins update --yes` to install.
+
 <Callout type="warn">
   `--read-only` blocks CLI commands annotated as writes. It is a guardrail, not a
   replacement for Jenkins RBAC; use a least-privilege Jenkins account as well.

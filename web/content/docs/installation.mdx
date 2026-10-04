@@ -50,3 +50,40 @@ cd jenkins-cli/cli-go && make install
 ```bash
 jenkins version
 ```
+
+## Updating
+
+`jenkins update` installs the latest release on macOS, Linux, and Windows. It
+shows `v<current> -> v<latest>` and asks before installing; pass `--yes` to skip
+the prompt. `jenkins update --check` only reports (`-o json` for scripts).
+
+```bash
+jenkins update
+jenkins update --yes
+jenkins update --check -o json
+```
+
+The archive is verified against the release's `checksums.txt` (SHA-256) before
+the binary is replaced, and any failure leaves the current binary in place. On
+Windows the running `jenkins.exe` is renamed to `jenkins.exe.old` and deleted on
+a later start. If the binary's directory is not writable, re-run with
+`sudo jenkins update` (an Administrator terminal on Windows) or reinstall with
+the install script into a directory you own. A binary built with `make install`
+lives in your Go bin directory and is not replaced: update it with
+`git pull && make install` in your `jenkins-cli/cli-go` checkout.
+
+### Update notice
+
+In an interactive terminal, jenkins checks GitHub at most once a day in the
+background and prints a notice on stderr after the command's output when a new
+release exists:
+
+```
+A new version of jenkins is available: v0.2.8 -> v0.2.9
+Update with: jenkins update
+Release notes: https://github.com/piyush-gambhir/jenkins-cli/releases/tag/v0.2.9
+```
+
+It never delays a command and is skipped when stderr is not a terminal, `CI` is
+set, `JENKINS_NO_UPDATE_NOTIFIER` or `NO_UPDATE_NOTIFIER` is set, or `--quiet` is
+on. Turn it off with `export JENKINS_NO_UPDATE_NOTIFIER=1`.

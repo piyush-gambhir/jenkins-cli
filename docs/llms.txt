@@ -70,16 +70,28 @@ Download the prebuilt binary for your platform from https://github.com/piyush-ga
 
 ### Self-update
 
-Once installed from a tagged release (not a `dev` build), the CLI can update itself on macOS and Linux:
+Once installed from a tagged release (not a `dev` build), the CLI can update itself on macOS, Linux, and Windows:
 
 ```bash
-jenkins update          # check and, after confirmation, download + install the latest release
-jenkins update --check  # only report whether a newer version exists; do not install
+jenkins update                  # show v<current> -> v<latest>, ask [Y/n], then install
+jenkins update --yes            # install without asking (required with --no-input or a non-terminal stdin)
+jenkins update --check          # only report; always queries GitHub, never installs, exit 0 either way
+jenkins update --check -o json  # {current_version, latest_version, update_available, release_url, install_method}
 ```
 
-The updater downloads the platform archive plus `checksums.txt`, verifies the SHA-256 checksum before replacing the binary in place (atomic rename), and aborts on mismatch. If the install location is not writable it tells you to re-run with `sudo jenkins update`. A non-blocking background update check also runs on most commands and prints a notice to stderr when a new version is available (suppressed for `version` and `update`).
+The updater downloads the platform archive plus `checksums.txt`, verifies the SHA-256 checksum (refusing on a mismatch or a missing entry), extracts only the `jenkins` binary, and replaces the running binary with an atomic rename. On Windows the running `jenkins.exe` is renamed to `jenkins.exe.old` (deleted on a later start) and the new one moved into place. Any failure leaves the old binary working. If the binary's directory is not writable it fails before downloading and tells you to re-run with `sudo jenkins update` or reinstall with the install script into a writable directory. `--read-only` blocks installing; `--check` stays allowed. `install_method` is `go` when the binary sits in a Go bin directory (`$GOBIN`, `$GOPATH/bin`, `~/go/bin`): such a binary was built from source and is not replaced; update it with `git pull && make install` in the `jenkins-cli/cli-go` checkout.
 
-On Windows, `jenkins update --check` works, but `jenkins update` refuses to install and points at the release page: download `jenkins-cli_windows_amd64.zip` and replace `jenkins.exe` with the one inside.
+### Update notice
+
+In an interactive terminal, commands check GitHub Releases at most once a day (3-second timeout, result cached in `update-check.json` in the config directory) without delaying the command. When a newer release exists, this prints on stderr after the command's output, at most once a day per release:
+
+```
+A new version of jenkins is available: v0.2.8 -> v0.2.9
+Update with: jenkins update
+Release notes: https://github.com/piyush-gambhir/jenkins-cli/releases/tag/v0.2.9
+```
+
+The check is skipped entirely (no network, no output) when stderr is not a terminal, `CI` is set, `JENKINS_NO_UPDATE_NOTIFIER` or `NO_UPDATE_NOTIFIER` is set to any non-empty value, `--quiet`/`JENKINS_QUIET` is on, the build is a `dev` build, or the command is `update`, `version`, `completion`, or `help`. Agents and scripts therefore never see it.
 
 ## Authentication
 
@@ -132,6 +144,7 @@ Full list of recognized environment variables:
 | `JENKINS_READ_ONLY` | Enable read-only safety mode when truthy (blocks all mutating commands) |
 | `JENKINS_NO_INPUT`  | Disable interactive prompts when set to `true` or `1` |
 | `JENKINS_QUIET`     | Suppress informational output when set to `true` or `1` |
+| `JENKINS_NO_UPDATE_NOTIFIER` | Turn off the update notice when set to any non-empty value (`NO_UPDATE_NOTIFIER` and `CI` do the same) |
 | `XDG_CONFIG_HOME`   | If set, the config lives under `$XDG_CONFIG_HOME/jenkins-cli/` instead of `~/.config/jenkins-cli/` |
 
 ### Per-invocation flags (no stored profile needed)
@@ -251,18 +264,19 @@ jenkins whoami -o json
 ```
 jenkins version
 ```
-Print version, commit, and build time. Skips auth and the update check.
+Print version, commit, and build time. When an earlier update check cached the latest release, also prints `latest: <version>` and `update_available: <true|false>` lines (cache only, never the network). Skips auth and the update check.
 ```bash
 jenkins version
 ```
 
 ```
-jenkins update [--check]
+jenkins update [--check] [-y|--yes]
 ```
-Self-update from GitHub Releases (SHA-256 checksum-verified). `--check` only reports availability and does not install. Cannot update a `dev` build. On Windows only `--check` works; replace `jenkins.exe` from the release `.zip` manually.
+Self-update from GitHub Releases (SHA-256 checksum-verified) on macOS, Linux, and Windows. (mutates; `--check` is allowed in read-only mode.) `--check` only reports and supports `-o json` (`current_version`, `latest_version`, `update_available`, `release_url`, `install_method`). Without `--yes` it asks `Update now? [Y/n]` in a terminal and fails under `--no-input` or a non-terminal stdin. Cannot update a `dev` build. A binary in a Go bin directory is not replaced; the command prints `git pull && make install` instead.
 ```bash
 jenkins update
-jenkins update --check
+jenkins update --yes
+jenkins update --check -o json
 ```
 
 ### job, manage Jenkins jobs

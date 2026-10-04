@@ -14,7 +14,7 @@ Designed for both human operators and coding agents (LLMs). All list and get com
 - Full API coverage: every Jenkins API endpoint accessible from the command line
 - Multiple output formats: table, JSON, YAML (`-o json`)
 - Profile management: multiple instances with `--profile`
-- Auto-update: checks for new versions, `jenkins update` to self-update (macOS and Linux)
+- Auto-update: a once-a-day update notice in interactive terminals, and `jenkins update` to self-update on macOS, Linux, and Windows
 - Agent-friendly: comprehensive help text, structured output for LLM coding agents
 - Cross-platform: macOS and Linux (amd64 and arm64), Windows (amd64)
 
@@ -1050,29 +1050,63 @@ Print the CLI version.
 jenkins version
 ```
 
+When an earlier update check cached the latest release, `jenkins version` also
+prints `latest` and `update_available`. It never contacts GitHub.
+
 #### update
 
-Check for and install CLI updates.
+Check for and install CLI updates on macOS, Linux, and Windows.
 
 ```bash
-# Check and install
+# Show v<current> -> v<latest>, ask, then install
 jenkins update
 
-# Check only (don't install)
+# Install without asking (scripts and agents)
+jenkins update --yes
+
+# Check only (never installs); -o json prints current_version, latest_version,
+# update_available, release_url, and install_method (self or go)
 jenkins update --check
+jenkins update --check -o json
 ```
 
-On Windows, use `jenkins update --check`. Plain `jenkins update` will not install
-and exits with an error that links the release. Download
-`jenkins-cli_windows_amd64.zip` from
-[GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
-replace `jenkins.exe` with the one inside.
+`jenkins update` downloads the release archive for your platform, verifies it
+against the release's `checksums.txt` (SHA-256), and replaces the running binary.
+Any failure leaves the current binary in place. On Windows the running
+`jenkins.exe` is renamed to `jenkins.exe.old`, which is deleted the next time
+jenkins starts. If the binary's directory is not writable, re-run with
+`sudo jenkins update` (an Administrator terminal on Windows) or reinstall with the
+install script into a directory you own. A binary in a Go bin directory
+(`$GOBIN`, `$GOPATH/bin`, `~/go/bin`) was built from source and is not replaced:
+update it with `git pull && make install` in your `jenkins-cli/cli-go` checkout.
+`--read-only` blocks installing but still allows `--check`.
 
 **Flags:**
 
-| Flag      | Description                          |
-|-----------|--------------------------------------|
-| `--check` | Only check, don't install            |
+| Flag          | Description                          |
+|---------------|--------------------------------------|
+| `--check`     | Only check, don't install            |
+| `-y, --yes`   | Install without asking for confirmation |
+
+#### Update notice
+
+In an interactive terminal, jenkins checks GitHub for a new release at most once
+a day in the background. When one exists, it prints this on stderr after the
+command's output, at most once a day per release:
+
+```
+A new version of jenkins is available: v0.2.8 -> v0.2.9
+Update with: jenkins update
+Release notes: https://github.com/piyush-gambhir/jenkins-cli/releases/tag/v0.2.9
+```
+
+The check never delays a command. It is skipped when stderr is not a terminal,
+`CI` is set, `JENKINS_NO_UPDATE_NOTIFIER` or `NO_UPDATE_NOTIFIER` is set to any
+value, or `--quiet` / `JENKINS_QUIET` is on. To turn it off:
+
+```bash
+export JENKINS_NO_UPDATE_NOTIFIER=1
+```
 
 ## Common Workflows
 
