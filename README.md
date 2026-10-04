@@ -1062,8 +1062,10 @@ jenkins update
 jenkins update --check
 ```
 
-On Windows, `jenkins update` only checks: download `jenkins-cli_windows_amd64.zip`
-from [GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
+On Windows, use `jenkins update --check`. Plain `jenkins update` will not install
+and exits with an error that links the release. Download
+`jenkins-cli_windows_amd64.zip` from
+[GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
 replace `jenkins.exe` with the one inside.
 
 **Flags:**
