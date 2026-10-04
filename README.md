@@ -11,12 +11,12 @@ Designed for both human operators and coding agents (LLMs). All list and get com
 
 ## Features
 
-- Full API coverage — every Jenkins API endpoint accessible from the command line
-- Multiple output formats — table, JSON, YAML (`-o json`)
-- Profile management — multiple instances with `--profile`
-- Auto-update — checks for new versions, `jenkins update` to self-update
-- Agent-friendly — comprehensive help text, structured output for LLM coding agents
-- Cross-platform — macOS, Linux, Windows (amd64 and arm64)
+- Full API coverage: every Jenkins API endpoint accessible from the command line
+- Multiple output formats: table, JSON, YAML (`-o json`)
+- Profile management: multiple instances with `--profile`
+- Auto-update: checks for new versions, `jenkins update` to self-update (macOS and Linux)
+- Agent-friendly: comprehensive help text, structured output for LLM coding agents
+- Cross-platform: macOS and Linux (amd64 and arm64), Windows (amd64)
 
 ## Installation
 
@@ -31,7 +31,7 @@ Install a specific version or to a custom directory:
 
 ```bash
 # Pin a version
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.1 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.7 sh
 
 # Install somewhere on your PATH without sudo
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
@@ -1061,6 +1061,10 @@ jenkins update
 # Check only (don't install)
 jenkins update --check
 ```
+
+On Windows, `jenkins update` only checks: download `jenkins-cli_windows_amd64.zip`
+from [GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
+replace `jenkins.exe` with the one inside.
 
 **Flags:**
 

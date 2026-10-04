@@ -15,7 +15,7 @@ curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/ins
 Pin a version or change the install directory:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.1 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.7 sh
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
 ```
 
@@ -29,6 +29,7 @@ curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/ins
 Prebuilt archives are attached to each
 [GitHub Release](https://github.com/piyush-gambhir/jenkins-cli/releases). Download
 the archive for your platform, extract it, and put `jenkins` on your `PATH`.
+Windows builds ship as `jenkins-cli_windows_amd64.zip` containing `jenkins.exe`.
 
 The install script expects assets named `jenkins-cli_<os>_<arch>.tar.gz`, where
 `<os>` is `darwin` or `linux` and `<arch>` is `amd64` or `arm64`.

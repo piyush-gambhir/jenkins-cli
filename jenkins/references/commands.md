@@ -64,7 +64,8 @@ jenkins version
 
 ### `jenkins update`
 
-Check for and install CLI updates.
+Check for and install CLI updates. On Windows only `--check` works: download the
+release `.zip` and replace `jenkins.exe` manually.
 
 ```bash
 jenkins update
