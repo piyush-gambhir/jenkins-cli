@@ -35,7 +35,7 @@ All methods produce the same `jenkins` binary.
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | sh
 
 # Pin a specific version
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.1.0 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | VERSION=0.2.7 sh
 
 # Install to a custom directory (default is /usr/local/bin)
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
@@ -55,7 +55,7 @@ make install
 
 ```bash
 git clone https://github.com/piyush-gambhir/jenkins-cli.git
-cd jenkins-cli
+cd jenkins-cli/cli-go
 go build -o jenkins .
 sudo mv jenkins /usr/local/bin/
 
@@ -66,11 +66,11 @@ make install    # build and install the named binary with version metadata
 
 ### From GitHub Releases
 
-Download the prebuilt binary for your platform from https://github.com/piyush-gambhir/jenkins-cli/releases and place it somewhere on your `PATH`. Release archives are named `jenkins-cli_<os>_<arch>.tar.gz` (`.zip` on Windows) and contain a `jenkins` binary; a `checksums.txt` is published alongside them.
+Download the prebuilt binary for your platform from https://github.com/piyush-gambhir/jenkins-cli/releases and place it somewhere on your `PATH`. Release archives are named `jenkins-cli_<os>_<arch>.tar.gz` (`.zip` on Windows) and contain a `jenkins` binary (`jenkins.exe` on Windows); a `checksums.txt` is published alongside them.
 
 ### Self-update
 
-Once installed from a tagged release (not a `dev` build), the CLI can update itself:
+Once installed from a tagged release (not a `dev` build), the CLI can update itself on macOS and Linux:
 
 ```bash
 jenkins update          # check and, after confirmation, download + install the latest release
@@ -78,6 +78,8 @@ jenkins update --check  # only report whether a newer version exists; do not ins
 ```
 
 The updater downloads the platform archive plus `checksums.txt`, verifies the SHA-256 checksum before replacing the binary in place (atomic rename), and aborts on mismatch. If the install location is not writable it tells you to re-run with `sudo jenkins update`. A non-blocking background update check also runs on most commands and prints a notice to stderr when a new version is available (suppressed for `version` and `update`).
+
+On Windows, `jenkins update --check` works, but `jenkins update` refuses to install and points at the release page: download `jenkins-cli_windows_amd64.zip` and replace `jenkins.exe` with the one inside.
 
 ## Authentication
 
@@ -257,7 +259,7 @@ jenkins version
 ```
 jenkins update [--check]
 ```
-Self-update from GitHub Releases (SHA-256 checksum-verified). `--check` only reports availability and does not install. Cannot update a `dev` build.
+Self-update from GitHub Releases (SHA-256 checksum-verified). `--check` only reports availability and does not install. Cannot update a `dev` build. On Windows only `--check` works; replace `jenkins.exe` from the release `.zip` manually.
 ```bash
 jenkins update
 jenkins update --check

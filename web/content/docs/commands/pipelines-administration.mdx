@@ -58,6 +58,12 @@ jenkins update
 jenkins version
 ```
 
+On Windows, use `jenkins update --check`. Plain `jenkins update` will not install
+and exits with an error that links the release. Download
+`jenkins-cli_windows_amd64.zip` from
+[GitHub Releases](https://github.com/piyush-gambhir/jenkins-cli/releases) and
+replace `jenkins.exe` with the one inside.
+
 <Callout type="warn">
   Plugin, credential, and system commands depend on Jenkins permissions; most
   system operations require `Overall/Administer`. `system run-script` executes
