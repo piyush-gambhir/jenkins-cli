@@ -1100,7 +1100,10 @@ Update with: jenkins update
 Release notes: https://github.com/piyush-gambhir/jenkins-cli/releases/tag/v0.2.9
 ```
 
-The check never delays a command. It is skipped when stderr is not a terminal,
+The check runs while the command does. If a command finishes before that
+day's check answers, it waits at most 1 second for it (so at most once a day).
+`jenkins update` and `jenkins update --check` store their result in the same
+cache, so the notice agrees with them. The check is skipped when stderr is not a terminal,
 `CI` is set, `JENKINS_NO_UPDATE_NOTIFIER` or `NO_UPDATE_NOTIFIER` is set to any
 value, or `--quiet` / `JENKINS_QUIET` is on. To turn it off:
 

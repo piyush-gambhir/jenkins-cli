@@ -46,6 +46,12 @@ var (
 	// updateResult receives the update check result for this run; nil when
 	// the notifier is suppressed.
 	updateResult chan *update.UpdateInfo
+	// updateCheckStarted is true when this run asked GitHub (the cache was
+	// stale), so PostRun may wait updateCheckGrace for the answer.
+	updateCheckStarted bool
+	// updateCheckGrace bounds that wait. The check is recorded before the
+	// request, so the wait happens at most once a day.
+	updateCheckGrace = time.Second
 )
 
 var rootCmd = &cobra.Command{
@@ -154,9 +160,9 @@ var stderrIsTerminal = func() bool { return term.IsTerminal(int(os.Stderr.Fd()))
 // startUpdateCheck prepares the update notice for this run, unless the
 // notifier is suppressed (then nothing touches the cache or the network). A
 // fresh cached result is used directly; otherwise GitHub is queried in the
-// background so the command never waits for it.
+// background while the command runs.
 func startUpdateCheck(topName string) {
-	updateResult = nil
+	updateResult, updateCheckStarted = nil, false
 	if !update.NotifierEnabled(os.Getenv, stderrIsTerminal(), quietFlag, version.Version, topName) {
 		return
 	}
@@ -168,24 +174,39 @@ func startUpdateCheck(topName string) {
 		return
 	}
 	check := checkForUpdate
+	updateCheckStarted = true
 	go func() {
 		info, _ := check(current, configDir, false)
 		result <- info
 	}()
 }
 
-// printUpdateNotice prints the update notice if the check has already
-// finished. It never waits: a check still in flight is simply not shown.
+// printUpdateNotice prints the update notice if it is due. A result from the
+// cache is used without waiting. A check this run started gets at most
+// updateCheckGrace to answer (it has its own 3s timeout); without that grace a
+// fast command would exit first and lose the day's check.
 func printUpdateNotice(w io.Writer) {
 	if updateResult == nil {
 		return
 	}
-	select {
-	case info := <-updateResult:
-		if info != nil && info.Available {
-			update.MaybeNotify(w, info, config.ConfigDir(), installMethod(), time.Now())
+	var info *update.UpdateInfo
+	if updateCheckStarted {
+		timer := time.NewTimer(updateCheckGrace)
+		defer timer.Stop()
+		select {
+		case info = <-updateResult:
+		case <-timer.C:
+			return
 		}
-	default:
+	} else {
+		select {
+		case info = <-updateResult:
+		default:
+			return
+		}
+	}
+	if info != nil && info.Available {
+		update.MaybeNotify(w, info, config.ConfigDir(), installMethod(), time.Now())
 	}
 }
 

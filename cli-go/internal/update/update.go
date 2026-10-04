@@ -89,8 +89,9 @@ func ReleaseURL(version string) string {
 }
 
 // CheckForUpdate returns the latest release, using the 24h cache in configDir
-// unless force is set. Failed checks are cached too, so a broken network does
-// not trigger a request on every command. Dev builds never touch the network.
+// unless force is set. Every answer, forced or not, is stored in the cache so
+// the notifier agrees with `jenkins update`. Failed checks are cached too, so a
+// broken network does not trigger a request on every command. Dev builds never touch the network.
 // A forced check (`jenkins update`) gets a longer timeout than the notifier.
 func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, error) {
 	current := NormalizeVersion(currentVersion)
@@ -102,6 +103,10 @@ func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, 
 		if info, ok := FreshCache(current, configDir); ok {
 			return info, nil
 		}
+		// Record the attempt before asking, keeping the last known release: if
+		// the command exits before the answer arrives, the next commands still
+		// skip the check (and its wait) for 24h instead of retrying every run.
+		recordAttempt(configDir)
 	}
 	timeout := backgroundTimeout
 	if force {
@@ -127,6 +132,15 @@ func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, 
 	entry.ReleaseURL = ReleaseURL(latest)
 	writeEntry(configDir, entry)
 	return infoFromEntry(current, entry), nil
+}
+
+func recordAttempt(configDir string) {
+	entry, err := readEntry(configDir)
+	if err != nil {
+		entry = &cacheEntry{}
+	}
+	entry.LastChecked = time.Now().UTC().Format(time.RFC3339)
+	writeEntry(configDir, entry)
 }
 
 // FreshCache returns the cached check result when it is less than 24h old,
@@ -161,11 +175,6 @@ func CachedUpdate(currentVersion, configDir string) *UpdateInfo {
 		return nil
 	}
 	return infoFromEntry(current, entry)
-}
-
-// ClearCache removes the update cache (after a successful update).
-func ClearCache(configDir string) {
-	_ = os.Remove(filepath.Join(configDir, cacheFile))
 }
 
 func infoFromEntry(current string, entry *cacheEntry) *UpdateInfo {

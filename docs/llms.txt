@@ -83,7 +83,7 @@ The updater downloads the platform archive plus `checksums.txt`, verifies the SH
 
 ### Update notice
 
-In an interactive terminal, commands check GitHub Releases at most once a day (3-second timeout, result cached in `update-check.json` in the config directory) without delaying the command. The latest version comes from the redirect at `https://github.com/piyush-gambhir/jenkins-cli/releases/latest`, not the rate-limited GitHub API, so shared IPs (offices, VPNs, CI runners) are not affected. When a newer release exists, this prints on stderr after the command's output, at most once a day per release:
+In an interactive terminal, commands check GitHub Releases at most once a day (3-second timeout, result cached in `update-check.json` in the config directory, which `jenkins update` and `jenkins update --check` also write). A command that finishes before the day's check answers waits for it at most 1 second, so the delay happens at most once a day. The latest version comes from the redirect at `https://github.com/piyush-gambhir/jenkins-cli/releases/latest`, not the rate-limited GitHub API, so shared IPs (offices, VPNs, CI runners) are not affected. When a newer release exists, this prints on stderr after the command's output, at most once a day per release:
 
 ```
 A new version of jenkins is available: v0.2.8 -> v0.2.9

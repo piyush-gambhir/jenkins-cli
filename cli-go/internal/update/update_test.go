@@ -223,6 +223,40 @@ func TestCheckForUpdateCachesResultForADay(t *testing.T) {
 	if n := hits.Load(); n != 2 {
 		t.Errorf("forced check did not bypass the cache: %d requests", n)
 	}
+	if cached, ok := FreshCache("0.2.8", dir); !ok || cached.LatestVersion != "0.2.9" {
+		t.Errorf("forced check result not cached: %+v, %v", cached, ok)
+	}
+}
+
+// A command can exit while the background check is still waiting for GitHub.
+// The attempt must already be recorded, or every later command would ask (and
+// wait) again.
+func TestBackgroundCheckIsRecordedBeforeTheRequest(t *testing.T) {
+	arrived, release := make(chan struct{}), make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(arrived)
+		<-release
+		w.Header().Set("Location", "/"+Repo+"/releases/tag/v0.2.9")
+		w.WriteHeader(http.StatusFound)
+	}))
+	defer srv.Close()
+	old := releasesBaseURL
+	releasesBaseURL = srv.URL
+	defer func() { releasesBaseURL = old }()
+
+	dir := t.TempDir()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = CheckForUpdate("0.2.8", dir, false)
+	}()
+	<-arrived
+	_, recorded := FreshCache("0.2.8", dir)
+	close(release)
+	<-done
+	if !recorded {
+		t.Error("the check was not recorded before GitHub answered")
+	}
 }
 
 func TestCheckForUpdateCachesFailures(t *testing.T) {

@@ -140,13 +140,7 @@ func TestUpdateAlreadyLatest(t *testing.T) {
 
 func TestUpdateYesInstalls(t *testing.T) {
 	s := stubUpdate(t, "0.2.9", update.InstallSelf)
-	cache := filepath.Join(config.ConfigDir(), "update-check.json")
-	if err := os.MkdirAll(filepath.Dir(cache), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(cache, []byte(`{"latest_version":"0.2.9"}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	writeUpdateCache(t, "0.2.9") // as the forced check stores it
 	out, err := runUpdate(t, "", "--yes")
 	if err != nil {
 		t.Fatal(err)
@@ -159,8 +153,10 @@ func TestUpdateYesInstalls(t *testing.T) {
 			t.Errorf("output does not contain %q:\n%s", want, out)
 		}
 	}
-	if _, err := os.Stat(cache); !os.IsNotExist(err) {
-		t.Errorf("update cache was not cleared: %v", err)
+	// The cache keeps the release the check stored, so the notifier agrees
+	// that the new binary is current.
+	if info, ok := update.FreshCache("0.2.9", config.ConfigDir()); !ok || info.LatestVersion != "0.2.9" || info.Available {
+		t.Errorf("cache after update: %+v, fresh %v; want latest 0.2.9 and no update", info, ok)
 	}
 }
 
@@ -339,7 +335,25 @@ func TestUpdateNotifierSuppressed(t *testing.T) {
 	}
 }
 
-func TestUpdateNoticeNeverWaits(t *testing.T) {
+// A command that finishes before the day's check answers must still show the
+// notice: the check is recorded before the request, so a lost answer would
+// mean no notice for 24h.
+func TestUpdateNoticeWaitsForTheDaysCheck(t *testing.T) {
+	stubNotifier(t, "0.2.9")
+	fake := checkForUpdate
+	checkForUpdate = func(current, dir string, force bool) (*update.UpdateInfo, error) {
+		time.Sleep(200 * time.Millisecond)
+		return fake(current, dir, force)
+	}
+	startUpdateCheck("job")
+	var out bytes.Buffer
+	printUpdateNotice(&out)
+	if !strings.Contains(out.String(), "A new version of jenkins is available: v0.2.8 -> v0.2.9") {
+		t.Errorf("notice %q, want it on the same run", out.String())
+	}
+}
+
+func TestUpdateNoticeWaitsAtMostTheGrace(t *testing.T) {
 	stubNotifier(t, "0.2.9")
 	release := make(chan struct{})
 	defer close(release)
@@ -352,8 +366,34 @@ func TestUpdateNoticeNeverWaits(t *testing.T) {
 	var out bytes.Buffer
 	start := time.Now()
 	printUpdateNotice(&out)
-	if elapsed := time.Since(start); elapsed > time.Second || out.Len() != 0 {
-		t.Errorf("printUpdateNotice waited %v and printed %q for a check still in flight", elapsed, out.String())
+	if elapsed := time.Since(start); elapsed > updateCheckGrace+500*time.Millisecond || out.Len() != 0 {
+		t.Errorf("printUpdateNotice waited %v and printed %q for a check slower than the grace", elapsed, out.String())
+	}
+}
+
+func TestUpdateNoticeFromCacheNeverWaits(t *testing.T) {
+	checks := stubNotifier(t, "0.2.9")
+	writeUpdateCache(t, "0.2.9")
+	startUpdateCheck("job")
+	var out bytes.Buffer
+	start := time.Now()
+	printUpdateNotice(&out)
+	if elapsed := time.Since(start); elapsed > 100*time.Millisecond || checks.Load() != 0 || !strings.Contains(out.String(), "v0.2.8 -> v0.2.9") {
+		t.Errorf("waited %v, checks %d, notice %q; want the cached notice at once", elapsed, checks.Load(), out.String())
+	}
+}
+
+// writeUpdateCache stores a fresh check result naming latest, as a check
+// made just now would.
+func writeUpdateCache(t *testing.T, latest string) {
+	t.Helper()
+	dir := config.ConfigDir()
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	data := fmt.Sprintf(`{"last_checked":%q,"latest_version":%q}`, time.Now().UTC().Format(time.RFC3339), latest)
+	if err := os.WriteFile(filepath.Join(dir, "update-check.json"), []byte(data), 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
 
