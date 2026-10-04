@@ -65,7 +65,9 @@ install_method (self or go). --read-only blocks installing but allows --check.
 
 Update notice: in an interactive terminal, other commands check GitHub at
 most once a day in the background and print a short notice on stderr when a
-new release exists (at most once a day per release). The check is skipped
+new release exists (at most once a day per release). A command that finishes
+before that daily check answers waits for it at most 1 second. The result of
+"jenkins update" and "jenkins update --check" is stored in the same cache. The check is skipped
 when stderr is not a terminal, CI is set, JENKINS_NO_UPDATE_NOTIFIER or
 NO_UPDATE_NOTIFIER is set, or --quiet / JENKINS_QUIET is on.
 
@@ -145,7 +147,8 @@ Examples:
 			if err := newInstaller(execPath).Install(cmd.Context(), info.LatestVersion); err != nil {
 				return fmt.Errorf("installing v%s: %w", info.LatestVersion, err)
 			}
-			update.ClearCache(config.ConfigDir())
+			// The forced check above already stored this release in the cache,
+			// so the notifier agrees that the new binary is up to date.
 			fmt.Fprintf(out, "Updated jenkins v%s -> v%s\nRelease notes: %s\n", current, info.LatestVersion, info.ReleaseURL)
 			return nil
 		},

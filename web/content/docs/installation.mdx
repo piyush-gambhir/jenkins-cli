@@ -84,6 +84,7 @@ Update with: jenkins update
 Release notes: https://github.com/piyush-gambhir/jenkins-cli/releases/tag/v0.2.9
 ```
 
-It never delays a command and is skipped when stderr is not a terminal, `CI` is
+A command that finishes before the day's check answers waits for it at most 1
+second (so at most once a day). The notice is skipped when stderr is not a terminal, `CI` is
 set, `JENKINS_NO_UPDATE_NOTIFIER` or `NO_UPDATE_NOTIFIER` is set, or `--quiet` is
 on. Turn it off with `export JENKINS_NO_UPDATE_NOTIFIER=1`.
