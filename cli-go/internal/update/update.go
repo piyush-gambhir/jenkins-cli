@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,15 +36,19 @@ const (
 	InstallSelf = "self"
 	InstallGo   = "go"
 
-	cacheTTL     = 24 * time.Hour
-	noticeTTL    = 24 * time.Hour
-	cacheFile    = "update-check.json"
-	checkTimeout = 3 * time.Second
-	maxAPIBytes  = 1 << 20
+	cacheTTL  = 24 * time.Hour
+	noticeTTL = 24 * time.Hour
+	cacheFile = "update-check.json"
+
+	// backgroundTimeout bounds the notifier's check; forcedTimeout bounds the
+	// check made by `jenkins update`.
+	backgroundTimeout = 3 * time.Second
+	forcedTimeout     = 15 * time.Second
 )
 
-// apiBaseURL is the GitHub API root; tests point it at an httptest server.
-var apiBaseURL = "https://api.github.com"
+// releasesBaseURL hosts the releases pages and assets; tests point it at an
+// httptest server. The rate-limited api.github.com is never used.
+var releasesBaseURL = "https://github.com"
 
 // releaseVersion accepts X.Y.Z with an optional pre-release suffix. Tags that
 // do not match are rejected because they end up in URLs and terminal output.
@@ -55,7 +60,6 @@ type UpdateInfo struct {
 	CurrentVersion string
 	LatestVersion  string
 	ReleaseURL     string
-	PublishedAt    string
 }
 
 // cacheEntry is the on-disk JSON format of update-check.json.
@@ -63,15 +67,9 @@ type cacheEntry struct {
 	LastChecked     string `json:"last_checked"`
 	LatestVersion   string `json:"latest_version,omitempty"`
 	ReleaseURL      string `json:"release_url,omitempty"`
-	PublishedAt     string `json:"published_at,omitempty"`
 	CheckError      string `json:"check_error,omitempty"`
 	NotifiedVersion string `json:"notified_version,omitempty"`
 	NotifiedAt      string `json:"notified_at,omitempty"`
-}
-
-type githubRelease struct {
-	TagName     string `json:"tag_name"`
-	PublishedAt string `json:"published_at"`
 }
 
 // NormalizeVersion trims spaces and a leading "v" ("v0.2.8" -> "0.2.8").
@@ -93,6 +91,7 @@ func ReleaseURL(version string) string {
 // CheckForUpdate returns the latest release, using the 24h cache in configDir
 // unless force is set. Failed checks are cached too, so a broken network does
 // not trigger a request on every command. Dev builds never touch the network.
+// A forced check (`jenkins update`) gets a longer timeout than the notifier.
 func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, error) {
 	current := NormalizeVersion(currentVersion)
 	if !IsReleaseVersion(current) {
@@ -104,12 +103,18 @@ func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, 
 			return info, nil
 		}
 	}
-	entry, err := readEntry(configDir)
-	if err != nil {
+	timeout := backgroundTimeout
+	if force {
+		timeout = forcedTimeout
+	}
+	latest, err := fetchLatest(current, timeout)
+
+	// Re-read after the request so a notice marker saved meanwhile by another
+	// command is kept.
+	entry, rerr := readEntry(configDir)
+	if rerr != nil {
 		entry = &cacheEntry{}
 	}
-
-	latest, publishedAt, err := fetchLatest(current)
 	entry.LastChecked = time.Now().UTC().Format(time.RFC3339)
 	if err != nil {
 		// Keep the last known release; only record the failure time.
@@ -120,7 +125,6 @@ func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, 
 	entry.CheckError = ""
 	entry.LatestVersion = latest
 	entry.ReleaseURL = ReleaseURL(latest)
-	entry.PublishedAt = publishedAt
 	writeEntry(configDir, entry)
 	return infoFromEntry(current, entry), nil
 }
@@ -171,46 +175,61 @@ func infoFromEntry(current string, entry *cacheEntry) *UpdateInfo {
 	}
 	info.LatestVersion = entry.LatestVersion
 	info.ReleaseURL = ReleaseURL(entry.LatestVersion)
-	info.PublishedAt = entry.PublishedAt
 	info.Available = isNewer(entry.LatestVersion, current)
 	return info
 }
 
-func fetchLatest(current string) (version, publishedAt string, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
+// fetchLatest resolves the latest release from the redirect that
+// github.com/<repo>/releases/latest answers with (Location:
+// .../releases/tag/v<version>). The redirect is not followed, and anything
+// other than a same-host semver v tag is an error.
+func fetchLatest(current string, timeout time.Duration) (string, error) {
+	base, err := url.Parse(releasesBaseURL)
+	if err != nil {
+		return "", err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	url := fmt.Sprintf("%s/repos/%s/releases/latest", apiBaseURL, Repo)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, releasesBaseURL+"/"+Repo+"/releases/latest", nil)
 	if err != nil {
-		return "", "", fmt.Errorf("creating request: %w", err)
+		return "", fmt.Errorf("creating request: %w", err)
 	}
-	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "jenkins-cli/"+current)
+	client := &http.Client{
+		Timeout:       timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("checking for updates: %w", err)
+	}
+	resp.Body.Close()
 
-	resp, err := (&http.Client{Timeout: checkTimeout}).Do(req)
+	switch resp.StatusCode {
+	case http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther, http.StatusTemporaryRedirect, http.StatusPermanentRedirect:
+	default:
+		return "", fmt.Errorf("checking for updates: %s returned status %d, not a redirect to the latest release", req.URL.Redacted(), resp.StatusCode)
+	}
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return "", errors.New("checking for updates: the latest-release redirect has no Location header")
+	}
+	loc, err := req.URL.Parse(location)
 	if err != nil {
-		return "", "", fmt.Errorf("checking for updates: %w", err)
+		return "", fmt.Errorf("checking for updates: invalid Location %q: %w", location, err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		if resp.Header.Get("X-RateLimit-Remaining") == "0" {
-			return "", "", errors.New("GitHub API rate limit exceeded; try again later")
-		}
-		return "", "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	if loc.Scheme != base.Scheme || !strings.EqualFold(loc.Host, base.Host) {
+		return "", fmt.Errorf("checking for updates: the latest-release redirect points to another host (%s)", loc.Redacted())
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAPIBytes))
-	if err != nil {
-		return "", "", fmt.Errorf("reading response: %w", err)
+	prefix := "/" + Repo + "/releases/tag/"
+	if len(loc.Path) <= len(prefix) || !strings.EqualFold(loc.Path[:len(prefix)], prefix) {
+		return "", fmt.Errorf("checking for updates: no release tag in redirect to %s", loc.Redacted())
 	}
-	var release githubRelease
-	if err := json.Unmarshal(body, &release); err != nil {
-		return "", "", fmt.Errorf("parsing release info: %w", err)
+	tag := loc.Path[len(prefix):]
+	if !strings.HasPrefix(tag, "v") || !releaseVersion.MatchString(tag[1:]) {
+		return "", fmt.Errorf("checking for updates: latest release tag %q is not a semver v tag", tag)
 	}
-	version = NormalizeVersion(release.TagName)
-	if !releaseVersion.MatchString(version) {
-		return "", "", fmt.Errorf("unexpected release tag %q", release.TagName)
-	}
-	return version, release.PublishedAt, nil
+	return tag[1:], nil
 }
 
 func readEntry(configDir string) (*cacheEntry, error) {

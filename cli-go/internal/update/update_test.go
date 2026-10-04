@@ -13,24 +13,73 @@ import (
 	"time"
 )
 
-// fakeGitHub serves releases/latest with tag and counts requests.
-func fakeGitHub(t *testing.T, status int, tag string) *atomic.Int32 {
+// fakeReleases serves github.com/<repo>/releases/latest with status and the
+// Location header built by location from the server URL (none when nil). It
+// counts requests to releases/latest and to any other path, which would mean
+// the redirect was followed.
+func fakeReleases(t *testing.T, status int, location func(base string) string) (latest, other *atomic.Int32) {
 	t.Helper()
-	var hits atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits.Add(1)
-		if r.URL.Path != "/repos/"+Repo+"/releases/latest" {
+	latest, other = &atomic.Int32{}, &atomic.Int32{}
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/"+Repo+"/releases/latest" {
+			other.Add(1)
 			http.NotFound(w, r)
 			return
 		}
+		latest.Add(1)
+		if location != nil {
+			w.Header().Set("Location", location(srv.URL))
+		}
 		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(map[string]string{"tag_name": tag, "published_at": "2026-10-01T00:00:00Z"})
 	}))
 	t.Cleanup(srv.Close)
-	old := apiBaseURL
-	apiBaseURL = srv.URL
-	t.Cleanup(func() { apiBaseURL = old })
-	return &hits
+	old := releasesBaseURL
+	releasesBaseURL = srv.URL
+	t.Cleanup(func() { releasesBaseURL = old })
+	return latest, other
+}
+
+func tagURL(tag string) func(string) string {
+	return func(base string) string { return base + "/" + Repo + "/releases/tag/" + tag }
+}
+
+func TestFetchLatestFromRedirect(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		status   int
+		location func(string) string
+		want     string // "" means an error
+	}{
+		{"302 to a semver tag", http.StatusFound, tagURL("v0.2.9"), "0.2.9"},
+		{"pre-release tag", http.StatusFound, tagURL("v0.3.0-rc.1"), "0.3.0-rc.1"},
+		{"relative Location", http.StatusFound, func(string) string { return "/" + Repo + "/releases/tag/v0.3.0" }, "0.3.0"},
+		{"missing Location", http.StatusFound, nil, ""},
+		{"foreign host", http.StatusFound, func(string) string { return "https://evil.example.com/" + Repo + "/releases/tag/v0.2.9" }, ""},
+		{"other repo", http.StatusFound, func(base string) string { return base + "/someone/else/releases/tag/v0.2.9" }, ""},
+		{"tag without v", http.StatusFound, tagURL("0.2.9"), ""},
+		{"non-semver tag", http.StatusFound, tagURL("v1.2"), ""},
+		{"named tag", http.StatusFound, tagURL("nightly"), ""},
+		{"traversal in tag", http.StatusFound, tagURL("v0.2.9/../../evil"), ""},
+		{"no release yet", http.StatusFound, func(base string) string { return base + "/" + Repo + "/releases" }, ""},
+		{"not a redirect", http.StatusOK, tagURL("v0.2.9"), ""},
+		{"server error", http.StatusInternalServerError, nil, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			latest, other := fakeReleases(t, tc.status, tc.location)
+			got, err := fetchLatest("0.2.8", time.Second)
+			if tc.want == "" {
+				if err == nil {
+					t.Errorf("fetchLatest = %q, want an error", got)
+				}
+			} else if err != nil || got != tc.want {
+				t.Errorf("fetchLatest = %q, %v; want %q", got, err, tc.want)
+			}
+			if latest.Load() != 1 || other.Load() != 0 {
+				t.Errorf("requests: releases/latest %d, other %d; want 1 and 0 (the redirect must not be followed)", latest.Load(), other.Load())
+			}
+		})
+	}
 }
 
 func TestNotifierEnabled(t *testing.T) {
@@ -152,7 +201,7 @@ func TestDetectInstallMethod(t *testing.T) {
 }
 
 func TestCheckForUpdateCachesResultForADay(t *testing.T) {
-	hits := fakeGitHub(t, http.StatusOK, "v0.2.9")
+	hits, _ := fakeReleases(t, http.StatusFound, tagURL("v0.2.9"))
 	dir := t.TempDir()
 
 	info, err := CheckForUpdate("0.2.8", dir, false)
@@ -177,7 +226,7 @@ func TestCheckForUpdateCachesResultForADay(t *testing.T) {
 }
 
 func TestCheckForUpdateCachesFailures(t *testing.T) {
-	hits := fakeGitHub(t, http.StatusInternalServerError, "")
+	hits, _ := fakeReleases(t, http.StatusInternalServerError, nil)
 	dir := t.TempDir()
 	if _, err := CheckForUpdate("0.2.8", dir, false); err == nil {
 		t.Fatal("expected an error from a failing GitHub API")
@@ -192,14 +241,14 @@ func TestCheckForUpdateCachesFailures(t *testing.T) {
 }
 
 func TestCheckForUpdateRejectsUnexpectedTag(t *testing.T) {
-	fakeGitHub(t, http.StatusOK, "v0.2.9/../../evil\x1b[31m")
+	fakeReleases(t, http.StatusFound, tagURL("v0.2.9/../../evil"))
 	if _, err := CheckForUpdate("0.2.8", t.TempDir(), true); err == nil {
 		t.Fatal("expected an unsafe tag to be rejected")
 	}
 }
 
 func TestDevBuildsNeverQueryGitHub(t *testing.T) {
-	hits := fakeGitHub(t, http.StatusOK, "v0.2.9")
+	hits, _ := fakeReleases(t, http.StatusFound, tagURL("v0.2.9"))
 	for _, v := range []string{"dev", "", "2b9e25a"} {
 		info, err := CheckForUpdate(v, t.TempDir(), true)
 		if err != nil || info.Available {
@@ -212,7 +261,7 @@ func TestDevBuildsNeverQueryGitHub(t *testing.T) {
 }
 
 func TestCachedUpdateReadsOnlyTheCache(t *testing.T) {
-	hits := fakeGitHub(t, http.StatusOK, "v9.9.9")
+	hits, _ := fakeReleases(t, http.StatusFound, tagURL("v9.9.9"))
 	dir := t.TempDir()
 	if info := CachedUpdate("0.2.8", dir); info != nil {
 		t.Fatalf("empty cache returned %+v", info)

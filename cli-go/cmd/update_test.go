@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -193,8 +194,8 @@ func TestUpdateConfirmation(t *testing.T) {
 	for _, tc := range []struct {
 		answer  string
 		install bool
-	}{{"\n", true}, {"y\n", true}, {"YES\n", true}, {"n\n", false}, {"no\n", false}} {
-		t.Run("prompt answer "+strings.TrimSpace(tc.answer), func(t *testing.T) {
+	}{{"\n", true}, {"y\n", true}, {"YES\n", true}, {"y", true}, {"n\n", false}, {"no\n", false}, {"", false}} {
+		t.Run(fmt.Sprintf("prompt answer %q", tc.answer), func(t *testing.T) {
 			s := stubUpdate(t, "0.2.9", update.InstallSelf)
 			stdinIsTerminal = func() bool { return true }
 			out, err := runUpdate(t, tc.answer)
@@ -208,6 +209,18 @@ func TestUpdateConfirmation(t *testing.T) {
 				t.Errorf("installed = %t, want %t", got, tc.install)
 			}
 		})
+	}
+}
+
+func TestUpdateReadOnlyFailsClosed(t *testing.T) {
+	s := stubUpdate(t, "0.2.9", update.InstallSelf)
+	profileFlag = "missing"
+	_, err := runUpdate(t, "", "--yes")
+	if err == nil || len(s.installs) != 0 {
+		t.Fatalf("err %v, installs %v; an unresolvable profile must block installing", err, s.installs)
+	}
+	if _, err := runUpdate(t, "", "--check"); err != nil {
+		t.Errorf("update --check with an unresolvable profile: %v", err)
 	}
 }
 

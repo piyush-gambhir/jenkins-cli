@@ -89,8 +89,14 @@ Examples:
 			if !update.IsReleaseVersion(current) {
 				return fmt.Errorf("cannot update a dev build (version %q); install a release from https://github.com/%s/releases", version.Version, update.Repo)
 			}
-			if !checkOnly && readOnlyEnabled() {
-				return readOnlyError(cmd)
+			if !checkOnly {
+				readOnly, err := readOnlyEnabled()
+				if err != nil {
+					return err
+				}
+				if readOnly {
+					return readOnlyError(cmd)
+				}
 			}
 
 			info, err := checkForUpdate(current, config.ConfigDir(), true)
@@ -120,10 +126,10 @@ Examples:
 					return errors.New("update needs confirmation and stdin is not a terminal: pass --yes to install")
 				}
 				fmt.Fprint(cmd.ErrOrStderr(), "Update now? [Y/n] ")
-				answer, _ := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
-				switch strings.ToLower(strings.TrimSpace(answer)) {
-				case "", "y", "yes":
-				default:
+				answer, readErr := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
+				answer = strings.ToLower(strings.TrimSpace(answer))
+				// Ctrl-D (EOF with no answer) cancels; only Enter means yes.
+				if (readErr != nil && answer == "") || (answer != "" && answer != "y" && answer != "yes") {
 					fmt.Fprintln(out, "Update cancelled.")
 					return nil
 				}
@@ -179,18 +185,20 @@ func printUpdateCheck(w io.Writer, format output.Format, info *update.UpdateInfo
 }
 
 // readOnlyEnabled resolves read-only mode for commands that skip the normal
-// auth bootstrap: the --read-only flag, JENKINS_READ_ONLY, or the profile.
-func readOnlyEnabled() bool {
+// auth bootstrap: the --read-only flag, JENKINS_READ_ONLY, or the profile. It
+// fails closed: if the config or profile cannot be resolved, the caller must
+// not write.
+func readOnlyEnabled() (bool, error) {
 	if readOnlyFlag {
-		return true
+		return true, nil
 	}
 	c, err := config.Load()
 	if err != nil {
-		c = &config.Config{}
+		return false, fmt.Errorf("loading config to check read-only mode: %w", err)
 	}
 	profile, err := config.ResolveAuth(config.FlagValues{}, os.LookupEnv, c, profileFlag)
 	if err != nil {
-		profile, _ = config.ResolveAuth(config.FlagValues{}, os.LookupEnv, &config.Config{}, "")
+		return false, fmt.Errorf("resolving profile to check read-only mode: %w", err)
 	}
-	return profile.ReadOnly
+	return profile.ReadOnly, nil
 }
