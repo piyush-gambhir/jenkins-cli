@@ -23,6 +23,13 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/version"
 )
 
+// Seams for tests: goos selects the platform-specific install path and
+// checkForUpdate avoids calling the GitHub API.
+var (
+	goos           = runtime.GOOS
+	checkForUpdate = update.CheckForUpdate
+)
+
 func newUpdateCmd() *cobra.Command {
 	var checkOnly bool
 
@@ -30,8 +37,11 @@ func newUpdateCmd() *cobra.Command {
 		Use:         "update",
 		Annotations: map[string]string{"mutates": "true"},
 		Short:       "Update jenkins to the latest version",
-		Long:        "Check for and install the latest version of the Jenkins CLI from GitHub Releases.",
-		Args:        cobra.NoArgs,
+		Long: `Check for and install the latest version of the Jenkins CLI from GitHub Releases.
+
+On Windows, only --check is supported: download the Windows .zip from the
+release page and replace jenkins.exe yourself.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo := "piyush-gambhir/jenkins-cli"
 			currentVersion := version.Version
@@ -41,7 +51,7 @@ func newUpdateCmd() *cobra.Command {
 			}
 
 			fmt.Fprint(os.Stderr, "Checking for updates... ")
-			info, err := update.CheckForUpdate(currentVersion, repo, config.ConfigDir(), true)
+			info, err := checkForUpdate(currentVersion, repo, config.ConfigDir(), true)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "")
 				return fmt.Errorf("checking for updates: %w", err)
@@ -61,6 +71,11 @@ func newUpdateCmd() *cobra.Command {
 			if checkOnly {
 				return nil
 			}
+			// Windows releases ship as a .zip, and a running .exe cannot be
+			// renamed over, so point the user at the release page instead.
+			if goos == "windows" {
+				return fmt.Errorf("self-update is not supported on Windows: download the Windows .zip from https://github.com/%s/releases/tag/v%s and replace jenkins.exe with the one inside", repo, info.LatestVersion)
+			}
 			if noInputFlag {
 				return fmt.Errorf("update requires confirmation; cannot run with --no-input (use --check to check only)")
 			}
@@ -76,7 +91,7 @@ func newUpdateCmd() *cobra.Command {
 			}
 
 			// Determine download URL
-			osName := runtime.GOOS
+			osName := goos
 			archName := runtime.GOARCH
 			archive := fmt.Sprintf("jenkins-cli_%s_%s.tar.gz", osName, archName)
 			downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/%s",
