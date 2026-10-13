@@ -117,6 +117,7 @@ Examples:
 	}
 
 	cmd.Flags().BoolVarP(&download, "download", "d", false, "Download artifacts")
+	cmd.Annotations = map[string]string{"writes-local-when-flag": "download"}
 	cmd.Flags().StringVar(&outputDir, "output-dir", "", "Directory to download artifacts to")
 
 	return cmd
