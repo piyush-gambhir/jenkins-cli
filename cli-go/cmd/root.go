@@ -329,6 +329,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Suppress informational output")
 
 	// Register all subcommands
+	rootCmd.AddCommand(newCommandsCmd())
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newLoginCmd())
 	rootCmd.AddCommand(newStatusCmd())
