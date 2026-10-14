@@ -4,6 +4,8 @@ A command-line interface for managing Jenkins CI/CD servers -- jobs, builds, nod
 
 Designed for both human operators and coding agents (LLMs). All list and get commands support `-o json` and `-o yaml` for machine-readable output.
 
+`jenkins commands resolve -- <arguments>` returns JSON describing the command, effect, explicitly set flags, and positional arguments offline, without reading configuration or executing the target command.
+
 [![Go Version](https://img.shields.io/github/go-mod/go-version/piyush-gambhir/jenkins-cli)](https://go.dev/)
 [![Release](https://img.shields.io/github/v/release/piyush-gambhir/jenkins-cli)](https://github.com/piyush-gambhir/jenkins-cli/releases)
 [![License](https://img.shields.io/github/license/piyush-gambhir/jenkins-cli)](LICENSE)

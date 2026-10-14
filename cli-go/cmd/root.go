@@ -282,6 +282,13 @@ func checkPermissions(cmd *cobra.Command, profile *config.Profile) error {
 	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
 		return readOnlyError(cmd)
 	}
+	// Reads that write local files with one flag (build artifacts --download) are
+	// local writes in read-only mode.
+	if effectiveReadOnly && cmd.Annotations != nil {
+		if flag := cmd.Annotations["writes-local-when-flag"]; flag != "" && cmd.Flags().Changed(flag) {
+			return fmt.Errorf("command '%s' with --%s writes local files and is blocked in read-only mode", cmd.CommandPath(), flag)
+		}
+	}
 
 	return nil
 }
@@ -322,6 +329,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Suppress informational output")
 
 	// Register all subcommands
+	rootCmd.AddCommand(newCommandsCmd())
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newLoginCmd())
 	rootCmd.AddCommand(newStatusCmd())
