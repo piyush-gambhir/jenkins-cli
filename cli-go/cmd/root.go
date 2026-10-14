@@ -54,14 +54,10 @@ var (
 	updateCheckGrace = time.Second
 )
 
-var rootCmd = newRootCmd(true)
-
-// newRootCmd builds an independent command tree. Probes keep flag values local.
-func newRootCmd(bindGlobals bool) *cobra.Command {
-	root := &cobra.Command{
-		Use:   "jenkins",
-		Short: "Jenkins CLI: manage Jenkins from the command line",
-		Long: `A comprehensive command-line interface for interacting with Jenkins CI/CD servers.
+var rootCmd = &cobra.Command{
+	Use:   "jenkins",
+	Short: "Jenkins CLI — manage Jenkins from the command line",
+	Long: `A comprehensive command-line interface for interacting with Jenkins CI/CD servers.
 
 Manage jobs, builds, nodes, plugins, credentials, pipelines, views, and
 system administration from the terminal. Designed for both human operators
@@ -79,64 +75,60 @@ Use "jenkins <command> --help" for detailed information about any command.
 
 Full command reference (for agents/LLMs): https://jenkins-cli.pages.dev/llms.txt
 Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenkins/SKILL.md`,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// Check env vars for --no-input and --quiet
-			if envFlagEnabled("JENKINS_NO_INPUT") {
-				noInputFlag = true
-			}
-			if !cmd.Flags().Changed("quiet") {
-				quietFlag = envFlagEnabled("JENKINS_QUIET")
-			}
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Check env vars for --no-input and --quiet
+		if envFlagEnabled("JENKINS_NO_INPUT") {
+			noInputFlag = true
+		}
+		if !cmd.Flags().Changed("quiet") {
+			quietFlag = envFlagEnabled("JENKINS_QUIET")
+		}
 
-			if runtime.GOOS == "windows" {
-				if execPath, err := update.ExecutablePath(); err == nil {
-					update.RemoveOldBinary(runtime.GOOS, execPath)
-				}
+		if runtime.GOOS == "windows" {
+			if execPath, err := update.ExecutablePath(); err == nil {
+				update.RemoveOldBinary(runtime.GOOS, execPath)
 			}
+		}
 
-			// Match on the command directly under the root, so `job update` is
-			// not mistaken for `update`.
-			topName := topLevelName(cmd)
-			startUpdateCheck(topName)
+		// Match on the command directly under the root, so `job update` is
+		// not mistaken for `update`.
+		topName := topLevelName(cmd)
+		startUpdateCheck(topName)
 
-			// Skip auth for commands that don't need it
-			if skipsAuth(topName) {
-				return nil
-			}
-			// Also skip for parent commands (they have subcommands)
-			if cmd.HasSubCommands() && cmd.Args == nil {
-				return nil
-			}
-
-			if err := loadConfig(cmd); err != nil {
-				return err
-			}
-
-			profile, err := resolveProfile(cmd)
-			if err != nil {
-				return err
-			}
-
-			if err := setupJenkinsClient(cmd.Context(), &profile); err != nil {
-				return err
-			}
-
-			if err := checkPermissions(cmd, &profile); err != nil {
-				return err
-			}
-
+		// Skip auth for commands that don't need it
+		if skipsAuth(topName) {
 			return nil
-		},
-		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			printUpdateNotice(cmd.ErrOrStderr())
+		}
+		// Also skip for parent commands (they have subcommands)
+		if cmd.HasSubCommands() && cmd.Args == nil {
 			return nil
-		},
-		SilenceUsage:  true,
-		SilenceErrors: true,
-	}
-	registerRootFlags(root, bindGlobals)
-	registerCommands(root)
-	return root
+		}
+
+		if err := loadConfig(cmd); err != nil {
+			return err
+		}
+
+		profile, err := resolveProfile(cmd)
+		if err != nil {
+			return err
+		}
+
+		if err := setupJenkinsClient(cmd.Context(), &profile); err != nil {
+			return err
+		}
+
+		if err := checkPermissions(cmd, &profile); err != nil {
+			return err
+		}
+
+		return nil
+	},
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		printUpdateNotice(cmd.ErrOrStderr())
+		return nil
+	},
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func envFlagEnabled(name string) bool {
@@ -316,50 +308,34 @@ func Execute() {
 	}
 }
 
-func registerRootFlags(root *cobra.Command, bindGlobals bool) {
-	stringFlag := func(value *string, name, shorthand, def, usage string) {
-		if bindGlobals {
-			root.PersistentFlags().StringVarP(value, name, shorthand, def, usage)
-		} else {
-			root.PersistentFlags().StringP(name, shorthand, def, usage)
-		}
-	}
-	boolFlag := func(value *bool, name, shorthand string, def bool, usage string) {
-		if bindGlobals {
-			root.PersistentFlags().BoolVarP(value, name, shorthand, def, usage)
-		} else {
-			root.PersistentFlags().BoolP(name, shorthand, def, usage)
-		}
-	}
-	stringFlag(&outputFormat, "output", "o", "", "Output format: table, json, yaml")
-	stringFlag(&profileFlag, "profile", "", "", "Configuration profile to use")
-	stringFlag(&serverFlag, "server", "s", "", "Jenkins server URL")
-	stringFlag(&userFlag, "user", "u", "", "Jenkins username")
-	stringFlag(&tokenFlag, "token", "t", "", "Jenkins API token")
-	boolFlag(&insecureFlag, "insecure", "k", false, "Skip TLS verification")
-	boolFlag(&noColorFlag, "no-color", "", false, "Disable color output")
-	boolFlag(&verboseFlag, "verbose", "v", false, "Verbose output")
-	boolFlag(&readOnlyFlag, "read-only", "", false, "Block write operations (safety mode for agents)")
-	boolFlag(&noInputFlag, "no-input", "", false, "Disable all interactive prompts (for CI/agent use)")
-	boolFlag(&quietFlag, "quiet", "q", false, "Suppress informational output")
-}
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "Output format: table, json, yaml")
+	rootCmd.PersistentFlags().StringVar(&profileFlag, "profile", "", "Configuration profile to use")
+	rootCmd.PersistentFlags().StringVarP(&serverFlag, "server", "s", "", "Jenkins server URL")
+	rootCmd.PersistentFlags().StringVarP(&userFlag, "user", "u", "", "Jenkins username")
+	rootCmd.PersistentFlags().StringVarP(&tokenFlag, "token", "t", "", "Jenkins API token")
+	rootCmd.PersistentFlags().BoolVarP(&insecureFlag, "insecure", "k", false, "Skip TLS verification")
+	rootCmd.PersistentFlags().BoolVar(&noColorFlag, "no-color", false, "Disable color output")
+	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose output")
+	rootCmd.PersistentFlags().BoolVar(&readOnlyFlag, "read-only", false, "Block write operations (safety mode for agents)")
+	rootCmd.PersistentFlags().BoolVar(&noInputFlag, "no-input", false, "Disable all interactive prompts (for CI/agent use)")
+	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Suppress informational output")
 
-func registerCommands(root *cobra.Command) {
 	// Register all subcommands
-	root.AddCommand(newCommandsCmd())
-	root.AddCommand(newVersionCmd())
-	root.AddCommand(newLoginCmd())
-	root.AddCommand(newStatusCmd())
-	root.AddCommand(newWhoAmICmd())
-	root.AddCommand(newJobCmd())
-	root.AddCommand(newBuildCmd())
-	root.AddCommand(newQueueCmd())
-	root.AddCommand(newNodeCmd())
-	root.AddCommand(newViewCmd())
-	root.AddCommand(newPluginCmd())
-	root.AddCommand(newCredentialCmd())
-	root.AddCommand(newUserCmd())
-	root.AddCommand(newPipelineCmd())
-	root.AddCommand(newSystemCmd())
-	root.AddCommand(newUpdateCmd())
+	rootCmd.AddCommand(newCommandsCmd())
+	rootCmd.AddCommand(newVersionCmd())
+	rootCmd.AddCommand(newLoginCmd())
+	rootCmd.AddCommand(newStatusCmd())
+	rootCmd.AddCommand(newWhoAmICmd())
+	rootCmd.AddCommand(newJobCmd())
+	rootCmd.AddCommand(newBuildCmd())
+	rootCmd.AddCommand(newQueueCmd())
+	rootCmd.AddCommand(newNodeCmd())
+	rootCmd.AddCommand(newViewCmd())
+	rootCmd.AddCommand(newPluginCmd())
+	rootCmd.AddCommand(newCredentialCmd())
+	rootCmd.AddCommand(newUserCmd())
+	rootCmd.AddCommand(newPipelineCmd())
+	rootCmd.AddCommand(newSystemCmd())
+	rootCmd.AddCommand(newUpdateCmd())
 }

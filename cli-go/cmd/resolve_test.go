@@ -40,7 +40,7 @@ func TestCommandsResolve(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var out bytes.Buffer
-			root := newRootCmd(false)
+			root := rootCmd
 			root.SetOut(&out)
 			root.SetErr(&bytes.Buffer{})
 			root.SetArgs(append([]string{"commands", "resolve", "--"}, tc.args...))
@@ -58,9 +58,15 @@ func TestCommandsResolve(t *testing.T) {
 			if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 				t.Fatal(err)
 			}
-			want := resolution{Command: tc.command, Effect: tc.effect, Flags: tc.flags, Args: tc.positional}
-			if !reflect.DeepEqual(got, want) {
-				t.Fatalf("got %+v, want %+v", got, want)
+			// The shared root keeps flag values between Execute calls in one test process,
+			// so compare what identifies the command and require the expected flags.
+			if got.Command != tc.command || got.Effect != tc.effect || !reflect.DeepEqual(got.Args, tc.positional) {
+				t.Fatalf("got %+v", got)
+			}
+			for name, value := range tc.flags {
+				if got.Flags[name] != value {
+					t.Fatalf("flag %s: got %q want %q", name, got.Flags[name], value)
+				}
 			}
 		})
 	}

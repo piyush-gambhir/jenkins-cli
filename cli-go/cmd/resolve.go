@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -47,10 +45,7 @@ func newResolveCmd() *cobra.Command {
 					break
 				}
 			}
-			probe := newRootCmd(false)
-			probe.SetIn(strings.NewReader(""))
-			probe.SetOut(io.Discard)
-			probe.SetErr(io.Discard)
+			probe := cmd.Root() // nothing executes and the process exits after answering
 			target, rest, err := probe.Find(args)
 			if err != nil || target == probe || !target.Runnable() {
 				return fmt.Errorf("arguments do not name a runnable jenkins command")
