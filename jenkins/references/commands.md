@@ -840,3 +840,14 @@ jenkins system run-script --script 'System.getProperties().each { k, v -> printl
 |---|---|
 | `--script <code>` | Groovy script to execute inline |
 | `--from-file <path>` | Path to Groovy script file |
+
+## Offline command resolution
+
+`jenkins commands resolve -- <arguments>` uses the CLI parser without executing the target, reading configuration, or accessing the network; it always returns JSON with `command`, `effect` (`read`, `remote_write`, or `local_write`), `conditional`, `interactive`, `secret_output`, explicitly set `flags`, and positional `args`.
+
+```bash
+jenkins commands resolve -- job list
+jenkins commands resolve -- -o json job build my-pipeline
+```
+
+Unknown commands, command groups, and invalid flags return an error with exit status 1.
