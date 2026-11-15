@@ -21,7 +21,6 @@ import (
 )
 
 var (
-	// Global flags
 	outputFormat string
 	profileFlag  string
 	serverFlag   string
@@ -34,24 +33,15 @@ var (
 	noInputFlag  bool
 	quietFlag    bool
 
-	// Shared state set during PersistentPreRunE
 	cfg           *config.Config
 	jenkinsClient *client.Client
 	outFormat     output.Format
 
-	// OutputFormat is the exported package-level output format string, set
-	// during PersistentPreRunE so that main.go error handling can use it.
 	OutputFormat string
 
-	// updateResult receives the update check result for this run; nil when
-	// the notifier is suppressed.
-	updateResult chan *update.UpdateInfo
-	// updateCheckStarted is true when this run asked GitHub (the cache was
-	// stale), so PostRun may wait updateCheckGrace for the answer.
+	updateResult       chan *update.UpdateInfo
 	updateCheckStarted bool
-	// updateCheckGrace bounds that wait. The check is recorded before the
-	// request, so the wait happens at most once a day.
-	updateCheckGrace = time.Second
+	updateCheckGrace   = time.Second
 )
 
 var rootCmd = &cobra.Command{
@@ -76,7 +66,6 @@ Use "jenkins <command> --help" for detailed information about any command.
 Full command reference (for agents/LLMs): https://jenkins-cli.pages.dev/llms.txt
 Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenkins/SKILL.md`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Check env vars for --no-input and --quiet
 		if envFlagEnabled("JENKINS_NO_INPUT") {
 			noInputFlag = true
 		}
@@ -90,16 +79,12 @@ Claude Code skill: https://github.com/piyush-gambhir/jenkins-cli/blob/main/jenki
 			}
 		}
 
-		// Match on the command directly under the root, so `job update` is
-		// not mistaken for `update`.
 		topName := topLevelName(cmd)
 		startUpdateCheck(topName)
 
-		// Skip auth for commands that don't need it
 		if skipsAuth(topName) {
 			return nil
 		}
-		// Also skip for parent commands (they have subcommands)
 		if cmd.HasSubCommands() && cmd.Args == nil {
 			return nil
 		}
@@ -136,7 +121,6 @@ func envFlagEnabled(name string) bool {
 	return strings.EqualFold(v, "true") || v == "1"
 }
 
-// topLevelName returns the name of the command directly under the root.
 func topLevelName(cmd *cobra.Command) string {
 	for cmd.HasParent() && cmd.Parent().HasParent() {
 		cmd = cmd.Parent()
@@ -144,8 +128,6 @@ func topLevelName(cmd *cobra.Command) string {
 	return cmd.Name()
 }
 
-// skipsAuth reports whether a top-level command runs without a Jenkins
-// server: it must not need config, credentials, or the client.
 func skipsAuth(topName string) bool {
 	switch topName {
 	case "version", "help", "login", "update", "completion":
@@ -154,13 +136,8 @@ func skipsAuth(topName string) bool {
 	return strings.HasPrefix(topName, "__complete")
 }
 
-// stderrIsTerminal is a seam for tests.
 var stderrIsTerminal = func() bool { return term.IsTerminal(int(os.Stderr.Fd())) }
 
-// startUpdateCheck prepares the update notice for this run, unless the
-// notifier is suppressed (then nothing touches the cache or the network). A
-// fresh cached result is used directly; otherwise GitHub is queried in the
-// background while the command runs.
 func startUpdateCheck(topName string) {
 	updateResult, updateCheckStarted = nil, false
 	if !update.NotifierEnabled(os.Getenv, stderrIsTerminal(), quietFlag, version.Version, topName) {
@@ -181,10 +158,6 @@ func startUpdateCheck(topName string) {
 	}()
 }
 
-// printUpdateNotice prints the update notice if it is due. A result from the
-// cache is used without waiting. A check this run started gets at most
-// updateCheckGrace to answer (it has its own 3s timeout); without that grace a
-// fast command would exit first and lose the day's check.
 func printUpdateNotice(w io.Writer) {
 	if updateResult == nil {
 		return
@@ -210,26 +183,21 @@ func printUpdateNotice(w io.Writer) {
 	}
 }
 
-// loadConfig loads the configuration and parses the output format.
 func loadConfig(cmd *cobra.Command) error {
 	var err error
 
-	// Parse output format
 	outFormat, err = output.ParseFormat(outputFormat)
 	if err != nil {
 		return err
 	}
 
-	// Store in exported package-level var for main.go error handling
 	OutputFormat = outputFormat
 
-	// Load config
 	cfg, err = config.Load()
 	if err != nil {
 		return fmt.Errorf("loading config: %w", err)
 	}
 
-	// If output format not set via flag, try config default
 	if outputFormat == "" && cfg.Defaults.Output != "" {
 		outFormat, err = output.ParseFormat(cfg.Defaults.Output)
 		if err != nil {
@@ -241,7 +209,6 @@ func loadConfig(cmd *cobra.Command) error {
 	return nil
 }
 
-// resolveProfile resolves auth credentials from flags, env, and config.
 func resolveProfile(cmd *cobra.Command) (config.Profile, error) {
 	flags := config.FlagValues{
 		Server:      serverFlag,
@@ -266,14 +233,12 @@ func resolveProfile(cmd *cobra.Command) (config.Profile, error) {
 	return profile, nil
 }
 
-// setupJenkinsClient creates the Jenkins API client from the resolved profile.
 func setupJenkinsClient(ctx context.Context, profile *config.Profile) error {
 	jenkinsClient = client.NewClient(*profile, verboseFlag)
 	jenkinsClient.SetContext(ctx)
 	return nil
 }
 
-// checkPermissions enforces read-only mode and no-input restrictions.
 func checkPermissions(cmd *cobra.Command, profile *config.Profile) error {
 	effectiveReadOnly := profile.ReadOnly
 	if readOnlyFlag {
@@ -282,8 +247,6 @@ func checkPermissions(cmd *cobra.Command, profile *config.Profile) error {
 	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
 		return readOnlyError(cmd)
 	}
-	// Reads that write local files with one flag (build artifacts --download) are
-	// local writes in read-only mode.
 	if effectiveReadOnly && cmd.Annotations != nil {
 		if flag := cmd.Annotations["writes-local-when-flag"]; flag != "" && cmd.Flags().Changed(flag) {
 			return fmt.Errorf("command '%s' with --%s writes local files and is blocked in read-only mode", cmd.CommandPath(), flag)
@@ -297,12 +260,10 @@ func readOnlyError(cmd *cobra.Command) error {
 	return fmt.Errorf("command '%s' is blocked in read-only mode; remove read_only from the profile or disable the read-only environment setting to permit writes", cmd.CommandPath())
 }
 
-// RootCmd returns the root cobra.Command for use in main.go.
 func RootCmd() *cobra.Command {
 	return rootCmd
 }
 
-// Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		statusCode := 0
@@ -328,7 +289,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&noInputFlag, "no-input", false, "Disable all interactive prompts (for CI/agent use)")
 	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Suppress informational output")
 
-	// Register all subcommands
 	rootCmd.AddCommand(newCommandsCmd())
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newLoginCmd())

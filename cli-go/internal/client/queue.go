@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// QueueItem represents an item in the Jenkins build queue.
 type QueueItem struct {
 	ID           int               `json:"id"`
 	Task         QueueTask         `json:"task"`
@@ -20,25 +19,21 @@ type QueueItem struct {
 	Actions      []json.RawMessage `json:"actions"`
 }
 
-// QueueTask represents the task associated with a queue item.
 type QueueTask struct {
 	Name  string `json:"name"`
 	URL   string `json:"url"`
 	Color string `json:"color"`
 }
 
-// QueueExecutable is the build that was created from a queue item.
 type QueueExecutable struct {
 	Number int    `json:"number"`
 	URL    string `json:"url"`
 }
 
-// QueueResponse wraps the queue list response.
 type QueueResponse struct {
 	Items []QueueItem `json:"items"`
 }
 
-// ListQueue lists all items in the build queue.
 func (c *Client) ListQueue() ([]QueueItem, error) {
 	data, err := c.Get("/queue", nil)
 	if err != nil {
@@ -53,7 +48,6 @@ func (c *Client) ListQueue() ([]QueueItem, error) {
 	return resp.Items, nil
 }
 
-// GetQueueItem gets details about a queue item.
 func (c *Client) GetQueueItem(id int) (*QueueItem, error) {
 	path := fmt.Sprintf("/queue/item/%d", id)
 
@@ -70,7 +64,6 @@ func (c *Client) GetQueueItem(id int) (*QueueItem, error) {
 	return &item, nil
 }
 
-// CancelQueueItem cancels a queued build.
 func (c *Client) CancelQueueItem(id int) error {
 	path := "/queue/cancelItem"
 	query := map[string][]string{"id": {fmt.Sprintf("%d", id)}}
@@ -83,7 +76,6 @@ func (c *Client) CancelQueueItem(id int) error {
 	return nil
 }
 
-// WaitForBuild waits for a queue item to get a build number.
 func (c *Client) WaitForBuild(queueID int, timeout time.Duration) (*BuildRef, error) {
 	deadline := time.Now().Add(timeout)
 

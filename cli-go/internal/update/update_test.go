@@ -13,10 +13,6 @@ import (
 	"time"
 )
 
-// fakeReleases serves github.com/<repo>/releases/latest with status and the
-// Location header built by location from the server URL (none when nil). It
-// counts requests to releases/latest and to any other path, which would mean
-// the redirect was followed.
 func fakeReleases(t *testing.T, status int, location func(base string) string) (latest, other *atomic.Int32) {
 	t.Helper()
 	latest, other = &atomic.Int32{}, &atomic.Int32{}
@@ -49,7 +45,7 @@ func TestFetchLatestFromRedirect(t *testing.T) {
 		name     string
 		status   int
 		location func(string) string
-		want     string // "" means an error
+		want     string
 	}{
 		{"302 to a semver tag", http.StatusFound, tagURL("v0.2.9"), "0.2.9"},
 		{"pre-release tag", http.StatusFound, tagURL("v0.3.0-rc.1"), "0.3.0-rc.1"},
@@ -228,9 +224,6 @@ func TestCheckForUpdateCachesResultForADay(t *testing.T) {
 	}
 }
 
-// A command can exit while the background check is still waiting for GitHub.
-// The attempt must already be recorded, or every later command would ask (and
-// wait) again.
 func TestBackgroundCheckIsRecordedBeforeTheRequest(t *testing.T) {
 	arrived, release := make(chan struct{}), make(chan struct{})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

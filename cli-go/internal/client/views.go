@@ -6,7 +6,6 @@ import (
 	"net/url"
 )
 
-// View represents a Jenkins view.
 type View struct {
 	Name        string `json:"name"`
 	URL         string `json:"url"`
@@ -14,12 +13,10 @@ type View struct {
 	Jobs        []Job  `json:"jobs"`
 }
 
-// ViewListResponse wraps a list of views.
 type ViewListResponse struct {
 	Views []View `json:"views"`
 }
 
-// ListViews lists all views.
 func (c *Client) ListViews() ([]View, error) {
 	tree := "views[name,url,description]"
 	query := TreeParam(tree)
@@ -37,7 +34,6 @@ func (c *Client) ListViews() ([]View, error) {
 	return resp.Views, nil
 }
 
-// GetView gets details about a view including its jobs.
 func (c *Client) GetView(name string) (*View, error) {
 	path := fmt.Sprintf("/view/%s", url.PathEscape(name))
 
@@ -54,7 +50,6 @@ func (c *Client) GetView(name string) (*View, error) {
 	return &view, nil
 }
 
-// CreateView creates a new view.
 func (c *Client) CreateView(name, viewType string) error {
 	if viewType == "" {
 		viewType = "hudson.model.ListView"
@@ -90,7 +85,6 @@ func (c *Client) CreateView(name, viewType string) error {
 	return nil
 }
 
-// DeleteView deletes a view.
 func (c *Client) DeleteView(name string) error {
 	path := fmt.Sprintf("/view/%s/doDelete", url.PathEscape(name))
 
@@ -102,7 +96,6 @@ func (c *Client) DeleteView(name string) error {
 	return nil
 }
 
-// AddJobToView adds a job to a view.
 func (c *Client) AddJobToView(viewName, jobName string) error {
 	path := fmt.Sprintf("/view/%s/addJobToView", url.PathEscape(viewName))
 	query := url.Values{"name": {jobName}}
@@ -115,7 +108,6 @@ func (c *Client) AddJobToView(viewName, jobName string) error {
 	return nil
 }
 
-// RemoveJobFromView removes a job from a view.
 func (c *Client) RemoveJobFromView(viewName, jobName string) error {
 	path := fmt.Sprintf("/view/%s/removeJobFromView", url.PathEscape(viewName))
 	query := url.Values{"name": {jobName}}

@@ -42,7 +42,6 @@ Examples:
 
 			reader := bufio.NewReader(os.Stdin)
 
-			// Prompt URL
 			fmt.Print("Jenkins URL: ")
 			urlStr, _ := reader.ReadString('\n')
 			urlStr = strings.TrimSpace(urlStr)
@@ -50,7 +49,6 @@ Examples:
 				return fmt.Errorf("URL is required")
 			}
 
-			// Prompt username
 			fmt.Print("Username: ")
 			username, _ := reader.ReadString('\n')
 			username = strings.TrimSpace(username)
@@ -58,7 +56,6 @@ Examples:
 				return fmt.Errorf("username is required")
 			}
 
-			// Prompt token
 			token, err := readLoginSecret(reader, os.Stdout, "API Token: ")
 			if err != nil {
 				return err
@@ -67,7 +64,6 @@ Examples:
 				return fmt.Errorf("API token is required")
 			}
 
-			// Prompt profile name
 			if profileName == "" {
 				fmt.Print("Profile name [default]: ")
 				profileName, _ = reader.ReadString('\n')
@@ -77,7 +73,6 @@ Examples:
 				}
 			}
 
-			// Test connection
 			profile := config.Profile{
 				URL:      strings.TrimRight(urlStr, "/"),
 				Username: username,

@@ -13,8 +13,6 @@ export async function GET() {
     .map(({ name, href }) => `- ${name}: ${href}`)
     .join('\n');
 
-  // index() returns a Promise since fumadocs-core 16.15.17. Its links are
-  // site-relative, so make them absolute to keep the basePath.
   const index = (await llms(source).index()).replace(
     /\]\((\/[^)]+)\)/g,
     (_match, path: string) => `](${siteUrl}${path})`,

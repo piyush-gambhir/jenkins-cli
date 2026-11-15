@@ -12,11 +12,8 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
 )
 
-// newTestServer creates an httptest.Server and a Client pointing to it.
-// The crumb endpoint returns a 404 by default (CSRF disabled).
 func newTestServer(handler http.HandlerFunc) (*httptest.Server, *Client) {
 	mux := http.NewServeMux()
-	// Default: CSRF disabled
 	mux.HandleFunc("/crumbIssuer/api/json", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
@@ -28,13 +25,11 @@ func newTestServer(handler http.HandlerFunc) (*httptest.Server, *Client) {
 		Username: "admin",
 		Token:    "secret-token",
 	})
-	// Point the client's httpClient at the test server (TLS not needed)
 	c.httpClient = ts.Client()
 
 	return ts, c
 }
 
-// newTestServerWithCrumb creates a test server that returns a crumb and delegates to handler.
 func newTestServerWithCrumb(handler http.HandlerFunc) (*httptest.Server, *Client) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/crumbIssuer/api/json", func(w http.ResponseWriter, r *http.Request) {
@@ -217,7 +212,6 @@ func TestErrorParsing_HTMLBody(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *APIError, got %T", err)
 	}
-	// parseErrorBody should extract the h1 content
 	if !strings.Contains(apiErr.Message, "Something went wrong") {
 		t.Errorf("expected message to contain 'Something went wrong', got %q", apiErr.Message)
 	}

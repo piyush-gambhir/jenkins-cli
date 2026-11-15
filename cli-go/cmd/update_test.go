@@ -29,9 +29,6 @@ type updateStub struct {
 	installs []string
 }
 
-// stubUpdate runs release 0.2.8 against a fake release check reporting
-// latest, with the given install method, an isolated config dir, and no
-// real terminal or executable.
 func stubUpdate(t *testing.T, latest, method string) *updateStub {
 	t.Helper()
 	oldCheck, oldMethod, oldExec, oldInstaller, oldStdin := checkForUpdate, installMethod, executablePath, newInstaller, stdinIsTerminal
@@ -140,7 +137,7 @@ func TestUpdateAlreadyLatest(t *testing.T) {
 
 func TestUpdateYesInstalls(t *testing.T) {
 	s := stubUpdate(t, "0.2.9", update.InstallSelf)
-	writeUpdateCache(t, "0.2.9") // as the forced check stores it
+	writeUpdateCache(t, "0.2.9")
 	out, err := runUpdate(t, "", "--yes")
 	if err != nil {
 		t.Fatal(err)
@@ -153,15 +150,12 @@ func TestUpdateYesInstalls(t *testing.T) {
 			t.Errorf("output does not contain %q:\n%s", want, out)
 		}
 	}
-	// The cache keeps the release the check stored, so the notifier agrees
-	// that the new binary is current.
 	if info, ok := update.FreshCache("0.2.9", config.ConfigDir()); !ok || info.LatestVersion != "0.2.9" || info.Available {
 		t.Errorf("cache after update: %+v, fresh %v; want latest 0.2.9 and no update", info, ok)
 	}
 }
 
 func TestUpdateWindowsInstalls(t *testing.T) {
-	// The Windows refusal is gone: the platform no longer changes the flow.
 	s := stubUpdate(t, "0.2.9", update.InstallSelf)
 	if _, err := runUpdate(t, "", "-y"); err != nil {
 		t.Fatal(err)
@@ -256,8 +250,6 @@ func TestUpdateReadOnly(t *testing.T) {
 	}
 }
 
-// stubNotifier makes the notifier think it runs release 0.2.8 in an
-// interactive terminal with no opt-out set, and counts release checks.
 func stubNotifier(t *testing.T, latest string) *atomic.Int32 {
 	t.Helper()
 	oldCheck, oldTTY, oldVersion, oldQuiet, oldMethod, oldResult := checkForUpdate, stderrIsTerminal, version.Version, quietFlag, installMethod, updateResult
@@ -279,8 +271,6 @@ func stubNotifier(t *testing.T, latest string) *atomic.Int32 {
 	return &checks
 }
 
-// waitForUpdateResult waits for the background check so the notice test is
-// deterministic; the real PostRun never waits.
 func waitForUpdateResult(t *testing.T) {
 	t.Helper()
 	select {
@@ -335,9 +325,6 @@ func TestUpdateNotifierSuppressed(t *testing.T) {
 	}
 }
 
-// A command that finishes before the day's check answers must still show the
-// notice: the check is recorded before the request, so a lost answer would
-// mean no notice for 24h.
 func TestUpdateNoticeWaitsForTheDaysCheck(t *testing.T) {
 	stubNotifier(t, "0.2.9")
 	fake := checkForUpdate
@@ -383,8 +370,6 @@ func TestUpdateNoticeFromCacheNeverWaits(t *testing.T) {
 	}
 }
 
-// writeUpdateCache stores a fresh check result naming latest, as a check
-// made just now would.
 func writeUpdateCache(t *testing.T, latest string) {
 	t.Helper()
 	dir := config.ConfigDir()
@@ -417,7 +402,6 @@ func TestTopLevelCommandDrivesSkips(t *testing.T) {
 			t.Errorf("%v: skipsAuth = %t, want %t", tc.args, got, tc.skipsAuth)
 		}
 	}
-	// Cobra adds these lazily during Execute, so check them by name.
 	for _, name := range []string{"completion", "help", "__complete", "__completeNoDesc"} {
 		if !skipsAuth(name) {
 			t.Errorf("%s needs a Jenkins server, want it to skip auth", name)
@@ -431,10 +415,6 @@ func TestJobUpdateIsNotTreatedAsSelfUpdate(t *testing.T) {
 	oldReadOnly := readOnlyFlag
 	t.Cleanup(func() { readOnlyFlag = oldReadOnly })
 	t.Setenv("JENKINS_URL", "http://127.0.0.1:1")
-	// Before the fix, `job update` skipped auth and read-only checks because
-	// its leaf name is "update", then dereferenced a nil client. Run the root
-	// hook directly: rootCmd.Execute would add cobra's lazy commands to the
-	// shared tree.
 	cmd, _, err := rootCmd.Find([]string{"job", "update"})
 	if err != nil {
 		t.Fatal(err)

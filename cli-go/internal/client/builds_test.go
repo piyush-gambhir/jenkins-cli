@@ -27,7 +27,6 @@ func newBuildTestServer(handler http.HandlerFunc) (*httptest.Server, *Client) {
 
 func TestListBuilds(t *testing.T) {
 	ts, c := newBuildTestServer(func(w http.ResponseWriter, r *http.Request) {
-		// "my-job" -> /job/my-job/api/json
 		if r.URL.Path != "/job/my-job/api/json" {
 			t.Errorf("expected path /job/my-job/api/json, got %q", r.URL.Path)
 		}
@@ -62,7 +61,6 @@ func TestListBuilds(t *testing.T) {
 
 func TestGetBuild(t *testing.T) {
 	ts, c := newBuildTestServer(func(w http.ResponseWriter, r *http.Request) {
-		// "my-job", number 42 -> /job/my-job/42/api/json
 		if r.URL.Path != "/job/my-job/42/api/json" {
 			t.Errorf("expected path /job/my-job/42/api/json, got %q", r.URL.Path)
 		}
@@ -88,9 +86,6 @@ func TestGetBuild(t *testing.T) {
 	}
 }
 
-// Regression test: pipeline (WorkflowRun) builds expose "changeSets" (a
-// list), not the freestyle "changeSet" object — and result/description are
-// null while a build is running. Both shapes must parse.
 func TestGetBuild_PipelineChangeSetsAndNullFields(t *testing.T) {
 	ts, c := newBuildTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -164,7 +159,6 @@ func TestStreamBuildLog(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		// Should hit /job/my-job/1/logText/progressiveText
 		if !strings.HasSuffix(r.URL.Path, "/logText/progressiveText") {
 			t.Errorf("unexpected path: %q", r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
@@ -176,15 +170,12 @@ func TestStreamBuildLog(t *testing.T) {
 
 		switch {
 		case start == "0":
-			// First chunk
 			w.Header().Set("X-Text-Size", "100")
 			w.Header().Set("X-More-Data", "true")
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "Line 1\nLine 2\n")
 		case start == "100":
-			// Second chunk, no more data
 			w.Header().Set("X-Text-Size", "200")
-			// No X-More-Data header -> stream ends
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "Line 3\nDone\n")
 		default:

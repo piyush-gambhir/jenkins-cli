@@ -5,9 +5,6 @@ import (
 	"testing"
 )
 
-// Regression test: update center entries identify plugins via "name", not
-// "shortName" as in the pluginManager API. Mapping them straight into Plugin
-// left ShortName empty and HasUpdate false for every row.
 func TestCheckPluginUpdates_MapsUpdateCenterFields(t *testing.T) {
 	ts, c := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

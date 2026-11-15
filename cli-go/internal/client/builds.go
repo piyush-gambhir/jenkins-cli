@@ -14,7 +14,6 @@ import (
 	jpath "github.com/piyush-gambhir/jenkins-cli/cli-go/internal/path"
 )
 
-// Build represents a Jenkins build.
 type Build struct {
 	Number            int               `json:"number"`
 	URL               string            `json:"url"`
@@ -30,26 +29,21 @@ type Build struct {
 	QueueID           int               `json:"queueId"`
 	Artifacts         []Artifact        `json:"artifacts"`
 	Actions           []json.RawMessage `json:"actions"`
-	// ChangeSet is populated for freestyle (AbstractBuild) builds;
-	// pipeline (WorkflowRun) builds expose ChangeSets instead.
-	ChangeSet  *ChangeSet  `json:"changeSet,omitempty"`
-	ChangeSets []ChangeSet `json:"changeSets,omitempty"`
+	ChangeSet         *ChangeSet        `json:"changeSet,omitempty"`
+	ChangeSets        []ChangeSet       `json:"changeSets,omitempty"`
 }
 
-// Artifact represents a build artifact.
 type Artifact struct {
 	DisplayPath  string `json:"displayPath"`
 	FileName     string `json:"fileName"`
 	RelativePath string `json:"relativePath"`
 }
 
-// ChangeSet represents changes in a build.
 type ChangeSet struct {
 	Items []ChangeItem `json:"items"`
 	Kind  string       `json:"kind"`
 }
 
-// ChangeItem represents a single change.
 type ChangeItem struct {
 	CommitID  string `json:"commitId"`
 	Timestamp int64  `json:"timestamp"`
@@ -57,17 +51,14 @@ type ChangeItem struct {
 	Message   string `json:"msg"`
 }
 
-// Author represents a change author.
 type Author struct {
 	FullName string `json:"fullName"`
 }
 
-// BuildListResponse wraps a list of builds.
 type BuildListResponse struct {
 	Builds []Build `json:"builds"`
 }
 
-// TestReport represents a test report.
 type TestReport struct {
 	FailCount  int         `json:"failCount"`
 	PassCount  int         `json:"passCount"`
@@ -77,14 +68,12 @@ type TestReport struct {
 	Suites     []TestSuite `json:"suites"`
 }
 
-// TestSuite represents a test suite.
 type TestSuite struct {
 	Name     string     `json:"name"`
 	Duration float64    `json:"duration"`
 	Cases    []TestCase `json:"cases"`
 }
 
-// TestCase represents a test case.
 type TestCase struct {
 	ClassName string  `json:"className"`
 	Name      string  `json:"name"`
@@ -93,17 +82,14 @@ type TestCase struct {
 	ErrorMsg  string  `json:"errorDetails"`
 }
 
-// EnvVars represents injected environment variables.
 type EnvVars struct {
 	EnvMap map[string]string `json:"envMap"`
 }
 
-// EnvVarsWrapper wraps environment variables response.
 type EnvVarsWrapper struct {
 	EnvMap map[string]string `json:"envMap"`
 }
 
-// PipelineStage represents a pipeline stage.
 type PipelineStage struct {
 	ID                  string `json:"id"`
 	Name                string `json:"name"`
@@ -113,7 +99,6 @@ type PipelineStage struct {
 	PauseDurationMillis int64  `json:"pauseDurationMillis"`
 }
 
-// PipelineRun represents a pipeline wfapi run.
 type PipelineRun struct {
 	ID              string          `json:"id"`
 	Name            string          `json:"name"`
@@ -123,7 +108,6 @@ type PipelineRun struct {
 	Stages          []PipelineStage `json:"stages"`
 }
 
-// ListBuilds lists builds for a job.
 func (c *Client) ListBuilds(jobPath string, limit int) ([]Build, error) {
 	path := jpath.ToJenkinsPath(jobPath)
 
@@ -143,7 +127,6 @@ func (c *Client) ListBuilds(jobPath string, limit int) ([]Build, error) {
 	return resp.Builds, nil
 }
 
-// GetBuild gets detailed info about a build.
 func (c *Client) GetBuild(jobPath string, number int) (*Build, error) {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d", number)
 
@@ -160,7 +143,6 @@ func (c *Client) GetBuild(jobPath string, number int) (*Build, error) {
 	return &build, nil
 }
 
-// GetBuildLog gets the console output of a build.
 func (c *Client) GetBuildLog(jobPath string, number int) (string, error) {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/consoleText", number)
 
@@ -172,9 +154,6 @@ func (c *Client) GetBuildLog(jobPath string, number int) (string, error) {
 	return string(data), nil
 }
 
-// StreamBuildLog streams the console output using the progressive text API.
-// If ctx is non-nil, it is respected: when the context expires during streaming,
-// the function returns cleanly with any partial output already written (not an error).
 func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ctx ...context.Context) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/logText/progressiveText", number)
 	start := "0"
@@ -185,11 +164,10 @@ func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ct
 	}
 
 	for {
-		// Check context before making a request
 		if streamCtx != nil {
 			select {
 			case <-streamCtx.Done():
-				return nil // return cleanly with partial output
+				return nil
 			default:
 			}
 		}
@@ -229,11 +207,10 @@ func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ct
 			break
 		}
 
-		// Respect context during sleep
 		if streamCtx != nil {
 			select {
 			case <-streamCtx.Done():
-				return nil // return cleanly with partial output
+				return nil
 			case <-time.After(1 * time.Second):
 			}
 		} else {
@@ -246,7 +223,6 @@ func (c *Client) StreamBuildLog(jobPath string, number int, writer io.Writer, ct
 	return nil
 }
 
-// StopBuild stops a running build.
 func (c *Client) StopBuild(jobPath string, number int) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/stop", number)
 
@@ -258,7 +234,6 @@ func (c *Client) StopBuild(jobPath string, number int) error {
 	return nil
 }
 
-// DeleteBuild deletes a build.
 func (c *Client) DeleteBuild(jobPath string, number int) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/doDelete", number)
 
@@ -270,7 +245,6 @@ func (c *Client) DeleteBuild(jobPath string, number int) error {
 	return nil
 }
 
-// GetBuildArtifacts lists artifacts for a build.
 func (c *Client) GetBuildArtifacts(jobPath string, number int) ([]Artifact, error) {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d", number)
 
@@ -290,7 +264,6 @@ func (c *Client) GetBuildArtifacts(jobPath string, number int) ([]Artifact, erro
 	return build.Artifacts, nil
 }
 
-// DownloadArtifact downloads a single artifact.
 func (c *Client) DownloadArtifact(jobPath string, number int, relativePath string) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := c.DownloadArtifactTo(c.ctx, jobPath, number, relativePath, &buf); err != nil {
@@ -299,8 +272,6 @@ func (c *Client) DownloadArtifact(jobPath string, number int, relativePath strin
 	return buf.Bytes(), nil
 }
 
-// DownloadArtifactTo streams a single artifact to w instead of retaining the
-// entire response in memory.
 func (c *Client) DownloadArtifactTo(ctx context.Context, jobPath string, number int, relativePath string, w io.Writer) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/artifact/%s", number, relativePath)
 
@@ -319,7 +290,6 @@ func (c *Client) DownloadArtifactTo(ctx context.Context, jobPath string, number 
 	return nil
 }
 
-// GetBuildTestReport gets the test report for a build.
 func (c *Client) GetBuildTestReport(jobPath string, number int) (*TestReport, error) {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/testReport", number)
 
@@ -336,7 +306,6 @@ func (c *Client) GetBuildTestReport(jobPath string, number int) (*TestReport, er
 	return &report, nil
 }
 
-// GetBuildEnvVars gets the injected environment variables for a build.
 func (c *Client) GetBuildEnvVars(jobPath string, number int) (map[string]string, error) {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/injectedEnvVars", number)
 
@@ -353,7 +322,6 @@ func (c *Client) GetBuildEnvVars(jobPath string, number int) (map[string]string,
 	return wrapper.EnvMap, nil
 }
 
-// GetBuildStages gets pipeline stages for a build via wfapi.
 func (c *Client) GetBuildStages(jobPath string, number int) (*PipelineRun, error) {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/wfapi/describe", number)
 
@@ -370,7 +338,6 @@ func (c *Client) GetBuildStages(jobPath string, number int) (*PipelineRun, error
 	return &run, nil
 }
 
-// ReplayBuild replays a pipeline build.
 func (c *Client) ReplayBuild(jobPath string, number int) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/replay/run", number)
 
@@ -382,7 +349,6 @@ func (c *Client) ReplayBuild(jobPath string, number int) error {
 	return nil
 }
 
-// FormatDuration formats a duration in milliseconds to a human-readable string.
 func FormatDuration(ms int64) string {
 	d := time.Duration(ms) * time.Millisecond
 	if d < time.Second {
@@ -397,7 +363,6 @@ func FormatDuration(ms int64) string {
 	return fmt.Sprintf("%dh %dm", int(d.Hours()), int(d.Minutes())%60)
 }
 
-// FormatTimestamp formats a Unix timestamp in milliseconds.
 func FormatTimestamp(ms int64) string {
 	if ms == 0 {
 		return "N/A"
@@ -406,7 +371,6 @@ func FormatTimestamp(ms int64) string {
 	return t.Local().Format("2006-01-02 15:04:05")
 }
 
-// ColorToStatus converts Jenkins color to a status string.
 func ColorToStatus(color string) string {
 	switch {
 	case strings.HasPrefix(color, "blue"):
@@ -429,7 +393,6 @@ func ColorToStatus(color string) string {
 	}
 }
 
-// ParseBuildNumber parses a build number string, supporting "lastBuild" etc.
 func ParseBuildNumber(s string) (int, error) {
 	n, err := strconv.Atoi(s)
 	if err != nil {

@@ -16,7 +16,6 @@ func main() {
 		if errors.As(err, &apiErr) {
 			statusCode = apiErr.StatusCode
 		}
-		// Use the output format set during PersistentPreRunE via Cobra flag parsing
 		outFmt, _ := output.ParseFormat(cmd.OutputFormat)
 		output.WriteError(os.Stderr, outFmt, err, statusCode)
 		os.Exit(1)

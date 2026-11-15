@@ -8,7 +8,6 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// ConfigDir returns the configuration directory path, respecting XDG_CONFIG_HOME.
 func ConfigDir() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return filepath.Join(xdg, "jenkins-cli")
@@ -20,12 +19,10 @@ func ConfigDir() string {
 	return filepath.Join(home, ".config", "jenkins-cli")
 }
 
-// ConfigPath returns the full path to the config file.
 func ConfigPath() string {
 	return filepath.Join(ConfigDir(), "config.yaml")
 }
 
-// Load reads the config file from disk. Returns a default config if file doesn't exist.
 func Load() (*Config, error) {
 	cfg := &Config{
 		Profiles: make(map[string]Profile),
@@ -50,7 +47,6 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// Save writes the config to disk, creating directories as needed.
 func Save(cfg *Config) error {
 	dir := ConfigDir()
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -75,12 +71,10 @@ func Save(cfg *Config) error {
 	return nil
 }
 
-// SetProfile adds or updates a profile in the config.
 func SetProfile(cfg *Config, name string, profile Profile) {
 	cfg.Profiles[name] = profile
 }
 
-// DeleteProfile removes a profile from the config.
 func DeleteProfile(cfg *Config, name string) error {
 	if _, ok := cfg.Profiles[name]; !ok {
 		return fmt.Errorf("profile %q not found", name)
@@ -92,7 +86,6 @@ func DeleteProfile(cfg *Config, name string) error {
 	return nil
 }
 
-// SetCurrentProfile sets the active profile.
 func SetCurrentProfile(cfg *Config, name string) error {
 	if _, ok := cfg.Profiles[name]; !ok {
 		return fmt.Errorf("profile %q not found", name)
@@ -101,7 +94,6 @@ func SetCurrentProfile(cfg *Config, name string) error {
 	return nil
 }
 
-// GetCurrentProfile returns the currently active profile.
 func GetCurrentProfile(cfg *Config) (Profile, error) {
 	if cfg.CurrentProfile == "" {
 		return Profile{}, fmt.Errorf("no current profile set")

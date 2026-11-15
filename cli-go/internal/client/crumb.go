@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// Crumb holds the CSRF crumb info from Jenkins.
 type Crumb struct {
 	RequestField string `json:"crumbRequestField"`
 	Value        string `json:"crumb"`
@@ -17,7 +16,6 @@ type Crumb struct {
 
 const crumbTTL = 5 * time.Minute
 
-// crumbCache provides thread-safe caching of CSRF crumbs.
 type crumbCache struct {
 	mu    sync.Mutex
 	crumb *Crumb
@@ -42,8 +40,6 @@ func (cc *crumbCache) set(c *Crumb) {
 	cc.crumb = c
 }
 
-// fetchCrumb retrieves the CSRF crumb from Jenkins.
-// Returns nil if CSRF is disabled (404 response).
 func (c *Client) fetchCrumb() (*Crumb, error) {
 	u := c.baseURL + "/crumbIssuer/api/json"
 
@@ -60,7 +56,6 @@ func (c *Client) fetchCrumb() (*Crumb, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		// CSRF protection is disabled
 		return nil, nil
 	}
 
@@ -86,8 +81,6 @@ func (c *Client) fetchCrumb() (*Crumb, error) {
 	return &crumb, nil
 }
 
-// ensureCrumb ensures a valid crumb is cached and returns it.
-// Returns nil if CSRF is disabled.
 func (c *Client) ensureCrumb() (*Crumb, error) {
 	if crumb := c.cache.get(); crumb != nil {
 		return crumb, nil

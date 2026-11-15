@@ -26,7 +26,6 @@ func TestJSONFormat(t *testing.T) {
 
 	output := buf.String()
 
-	// Verify it's valid JSON
 	var parsed map[string]interface{}
 	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
 		t.Fatalf("output is not valid JSON: %v\noutput: %s", err, output)
@@ -38,7 +37,6 @@ func TestJSONFormat(t *testing.T) {
 	if parsed["status"] != "SUCCESS" {
 		t.Errorf("expected status 'SUCCESS', got %v", parsed["status"])
 	}
-	// JSON numbers are float64 by default
 	if parsed["number"] != float64(42) {
 		t.Errorf("expected number 42, got %v", parsed["number"])
 	}
@@ -60,7 +58,6 @@ func TestYAMLFormat(t *testing.T) {
 
 	output := buf.String()
 
-	// Verify it's valid YAML
 	var parsed map[string]interface{}
 	if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
 		t.Fatalf("output is not valid YAML: %v\noutput: %s", err, output)
@@ -102,14 +99,12 @@ func TestTableFormat(t *testing.T) {
 
 	output := buf.String()
 
-	// Check that headers are present
 	if !strings.Contains(output, "NAME") {
 		t.Errorf("expected output to contain 'NAME', got:\n%s", output)
 	}
 	if !strings.Contains(output, "STATUS") {
 		t.Errorf("expected output to contain 'STATUS', got:\n%s", output)
 	}
-	// Check that row data is present
 	if !strings.Contains(output, "job1") {
 		t.Errorf("expected output to contain 'job1', got:\n%s", output)
 	}
@@ -137,7 +132,6 @@ func TestNewFormatter_Default_Table(t *testing.T) {
 		t.Errorf("expected *TableFormatter, got %T", f)
 	}
 
-	// Also test with empty format (should default to table)
 	f2 := NewFormatter("", &buf)
 	_, ok2 := f2.(*TableFormatter)
 	if !ok2 {

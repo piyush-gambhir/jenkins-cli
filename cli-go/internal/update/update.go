@@ -1,5 +1,3 @@
-// Package update checks GitHub Releases for new versions of the CLI, prints
-// the update notice, and installs releases in place (see install.go).
 package update
 
 import (
@@ -20,19 +18,11 @@ import (
 )
 
 const (
-	// Repo is the GitHub repository that publishes releases.
-	Repo = "piyush-gambhir/jenkins-cli"
-	// Binary is the executable name (without .exe).
-	Binary = "jenkins"
-	// SourceUpdateCommand updates a binary built from source with
-	// `make install`, which installs into the Go bin directory. A plain
-	// `go install` of the module would name the binary cli-go and build a dev
-	// version, so it is not suggested.
+	Repo                = "piyush-gambhir/jenkins-cli"
+	Binary              = "jenkins"
 	SourceUpdateCommand = "git pull && make install (in your jenkins-cli/cli-go checkout)"
-	// EnvPrefix is the CLI's environment variable prefix.
-	EnvPrefix = "JENKINS"
+	EnvPrefix           = "JENKINS"
 
-	// InstallSelf and InstallGo are the values of install_method.
 	InstallSelf = "self"
 	InstallGo   = "go"
 
@@ -40,21 +30,14 @@ const (
 	noticeTTL = 24 * time.Hour
 	cacheFile = "update-check.json"
 
-	// backgroundTimeout bounds the notifier's check; forcedTimeout bounds the
-	// check made by `jenkins update`.
 	backgroundTimeout = 3 * time.Second
 	forcedTimeout     = 15 * time.Second
 )
 
-// releasesBaseURL hosts the releases pages and assets; tests point it at an
-// httptest server. The rate-limited api.github.com is never used.
 var releasesBaseURL = "https://github.com"
 
-// releaseVersion accepts X.Y.Z with an optional pre-release suffix. Tags that
-// do not match are rejected because they end up in URLs and terminal output.
 var releaseVersion = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$`)
 
-// UpdateInfo holds the result of an update check.
 type UpdateInfo struct {
 	Available      bool
 	CurrentVersion string
@@ -62,7 +45,6 @@ type UpdateInfo struct {
 	ReleaseURL     string
 }
 
-// cacheEntry is the on-disk JSON format of update-check.json.
 type cacheEntry struct {
 	LastChecked     string `json:"last_checked"`
 	LatestVersion   string `json:"latest_version,omitempty"`
@@ -72,27 +54,18 @@ type cacheEntry struct {
 	NotifiedAt      string `json:"notified_at,omitempty"`
 }
 
-// NormalizeVersion trims spaces and a leading "v" ("v0.2.8" -> "0.2.8").
 func NormalizeVersion(v string) string {
 	return strings.TrimPrefix(strings.TrimSpace(v), "v")
 }
 
-// IsReleaseVersion reports whether v is a semver release build. Dev builds
-// ("dev", empty, a bare commit hash) never check for or install updates.
 func IsReleaseVersion(v string) bool {
 	return parseSemver(NormalizeVersion(v)) != nil
 }
 
-// ReleaseURL returns the release notes page for version.
 func ReleaseURL(version string) string {
 	return fmt.Sprintf("https://github.com/%s/releases/tag/v%s", Repo, NormalizeVersion(version))
 }
 
-// CheckForUpdate returns the latest release, using the 24h cache in configDir
-// unless force is set. Every answer, forced or not, is stored in the cache so
-// the notifier agrees with `jenkins update`. Failed checks are cached too, so a
-// broken network does not trigger a request on every command. Dev builds never touch the network.
-// A forced check (`jenkins update`) gets a longer timeout than the notifier.
 func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, error) {
 	current := NormalizeVersion(currentVersion)
 	if !IsReleaseVersion(current) {
@@ -103,9 +76,6 @@ func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, 
 		if info, ok := FreshCache(current, configDir); ok {
 			return info, nil
 		}
-		// Record the attempt before asking, keeping the last known release: if
-		// the command exits before the answer arrives, the next commands still
-		// skip the check (and its wait) for 24h instead of retrying every run.
 		recordAttempt(configDir)
 	}
 	timeout := backgroundTimeout
@@ -114,15 +84,12 @@ func CheckForUpdate(currentVersion, configDir string, force bool) (*UpdateInfo, 
 	}
 	latest, err := fetchLatest(current, timeout)
 
-	// Re-read after the request so a notice marker saved meanwhile by another
-	// command is kept.
 	entry, rerr := readEntry(configDir)
 	if rerr != nil {
 		entry = &cacheEntry{}
 	}
 	entry.LastChecked = time.Now().UTC().Format(time.RFC3339)
 	if err != nil {
-		// Keep the last known release; only record the failure time.
 		entry.CheckError = err.Error()
 		writeEntry(configDir, entry)
 		return nil, err
@@ -143,9 +110,6 @@ func recordAttempt(configDir string) {
 	writeEntry(configDir, entry)
 }
 
-// FreshCache returns the cached check result when it is less than 24h old,
-// including a cached failure (which keeps the last known release). It never
-// touches the network.
 func FreshCache(currentVersion, configDir string) (*UpdateInfo, bool) {
 	current := NormalizeVersion(currentVersion)
 	entry, err := readEntry(configDir)
@@ -162,9 +126,6 @@ func FreshCache(currentVersion, configDir string) (*UpdateInfo, bool) {
 	return infoFromEntry(current, entry), true
 }
 
-// CachedUpdate returns what the cache knows about the latest release, without
-// any network access. It returns nil when nothing valid is cached, or when the
-// cached release is older than the running one (the cache predates an update).
 func CachedUpdate(currentVersion, configDir string) *UpdateInfo {
 	current := NormalizeVersion(currentVersion)
 	if !IsReleaseVersion(current) {
@@ -188,10 +149,6 @@ func infoFromEntry(current string, entry *cacheEntry) *UpdateInfo {
 	return info
 }
 
-// fetchLatest resolves the latest release from the redirect that
-// github.com/<repo>/releases/latest answers with (Location:
-// .../releases/tag/v<version>). The redirect is not followed, and anything
-// other than a same-host semver v tag is an error.
 func fetchLatest(current string, timeout time.Duration) (string, error) {
 	base, err := url.Parse(releasesBaseURL)
 	if err != nil {
@@ -253,9 +210,6 @@ func readEntry(configDir string) (*cacheEntry, error) {
 	return &entry, nil
 }
 
-// writeEntry saves the cache atomically (temp file + rename) so a process
-// that exits mid-write never leaves a torn file. Errors are ignored: the
-// cache is an optimization.
 func writeEntry(configDir string, entry *cacheEntry) {
 	if err := os.MkdirAll(configDir, 0o700); err != nil {
 		return
@@ -275,10 +229,6 @@ func writeEntry(configDir string, entry *cacheEntry) {
 	}
 }
 
-// NotifierEnabled reports whether the background check should run at all.
-// When it returns false there is no network access and no notice. topCommand
-// is the name of the command directly under the root ("job" for
-// `jenkins job list`).
 func NotifierEnabled(getenv func(string) string, stderrIsTerminal, quiet bool, currentVersion, topCommand string) bool {
 	if !stderrIsTerminal || quiet || !IsReleaseVersion(currentVersion) {
 		return false
@@ -295,7 +245,6 @@ func NotifierEnabled(getenv func(string) string, stderrIsTerminal, quiet bool, c
 	return !strings.HasPrefix(topCommand, "__complete")
 }
 
-// Notice returns the update notice text, starting with a blank line.
 func Notice(info *UpdateInfo, installMethod string) string {
 	updateCmd := Binary + " update"
 	if installMethod == InstallGo {
@@ -305,8 +254,6 @@ func Notice(info *UpdateInfo, installMethod string) string {
 		Binary, info.CurrentVersion, info.LatestVersion, updateCmd, ReleaseURL(info.LatestVersion))
 }
 
-// MaybeNotify prints the notice for info unless it was already shown for the
-// same latest version within the last 24h, and records that it was shown.
 func MaybeNotify(w io.Writer, info *UpdateInfo, configDir, installMethod string, now time.Time) bool {
 	if info == nil || !info.Available || !releaseVersion.MatchString(info.LatestVersion) {
 		return false
@@ -329,7 +276,6 @@ func MaybeNotify(w io.Writer, info *UpdateInfo, configDir, installMethod string,
 	return true
 }
 
-// ExecutablePath returns the running executable with symlinks resolved.
 func ExecutablePath() (string, error) {
 	path, err := os.Executable()
 	if err != nil {
@@ -342,7 +288,6 @@ func ExecutablePath() (string, error) {
 	return resolved, nil
 }
 
-// CurrentInstallMethod reports how the running binary was installed.
 func CurrentInstallMethod() string {
 	path, err := ExecutablePath()
 	if err != nil {
@@ -352,9 +297,6 @@ func CurrentInstallMethod() string {
 	return DetectInstallMethod(path, os.Getenv, home, runtime.GOOS)
 }
 
-// DetectInstallMethod returns InstallGo when execPath is in a Go bin
-// directory ($GOBIN, $GOPATH/bin for each GOPATH entry, or ~/go/bin), where
-// the binary was built from source, and InstallSelf otherwise.
 func DetectInstallMethod(execPath string, getenv func(string) string, home, goos string) string {
 	var dirs []string
 	if gobin := getenv("GOBIN"); gobin != "" {
@@ -388,9 +330,6 @@ func canonicalDir(dir string) string {
 	return filepath.Clean(dir)
 }
 
-// RemoveOldBinary deletes the <bin>.exe.old left behind by a Windows update.
-// The previous executable cannot be deleted while it is running, so the next
-// start cleans it up. Best effort.
 func RemoveOldBinary(goos, execPath string) {
 	if goos != "windows" || execPath == "" {
 		return
@@ -400,7 +339,6 @@ func RemoveOldBinary(goos, execPath string) {
 	}
 }
 
-// isNewer returns true if latest is a higher semver than current.
 func isNewer(latest, current string) bool {
 	latestParts := parseSemver(latest)
 	currentParts := parseSemver(current)
@@ -418,8 +356,6 @@ func isNewer(latest, current string) bool {
 	return false
 }
 
-// parseSemver parses "X.Y.Z" or "vX.Y.Z" (ignoring a "-suffix") into
-// [major, minor, patch]. Returns nil if parsing fails.
 func parseSemver(v string) []int {
 	v = strings.TrimPrefix(v, "v")
 	if idx := strings.Index(v, "-"); idx != -1 {

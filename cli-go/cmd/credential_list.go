@@ -58,7 +58,6 @@ Examples:
 				return fmt.Errorf("listing credentials: %w", err)
 			}
 
-			// Filter by type if specified
 			if credType != "" {
 				typeLower := strings.ToLower(credType)
 				var filtered []client.Credential

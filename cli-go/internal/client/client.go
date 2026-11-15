@@ -17,14 +17,11 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
 )
 
-// sensitiveHeaders is the set of headers that should be redacted in verbose output.
 var sensitiveHeaders = map[string]bool{
 	"Authorization": true,
 	"Cookie":        true,
 }
 
-// redactAuthHeaders returns a copy of the headers with sensitive auth headers replaced
-// by [REDACTED]. Other headers (X-Request-Id, Content-Type, Jenkins-Crumb, etc.) remain visible.
 func redactAuthHeaders(headers http.Header) http.Header {
 	redacted := make(http.Header)
 	for key, values := range headers {
@@ -37,7 +34,6 @@ func redactAuthHeaders(headers http.Header) http.Header {
 	return redacted
 }
 
-// verboseTransport wraps an http.RoundTripper and logs request/response details to stderr.
 type verboseTransport struct {
 	transport http.RoundTripper
 }
@@ -59,7 +55,6 @@ func (t *verboseTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return resp, err
 }
 
-// Client is a Jenkins API client.
 type Client struct {
 	ctx        context.Context
 	baseURL    string
@@ -70,8 +65,6 @@ type Client struct {
 	insecure   bool
 }
 
-// NewClient creates a new Jenkins API client from a resolved profile.
-// When verbose is true, HTTP request/response details are logged to stderr.
 func NewClient(profile config.Profile, verbose ...bool) *Client {
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
@@ -108,8 +101,6 @@ func NewClient(profile config.Profile, verbose ...bool) *Client {
 	}
 }
 
-// SetContext sets the default context used by requests that do not provide a
-// more specific one. Cobra commands use this to propagate Ctrl-C cancellation.
 func (c *Client) SetContext(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -128,8 +119,6 @@ func (c *Client) sleep(d time.Duration) error {
 	}
 }
 
-// Get performs a GET request. If the path doesn't end with /api/json or contain /api/,
-// it appends /api/json automatically unless rawOutput is true.
 func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 	apiPath := path
 	if !strings.Contains(path, "/api/") && !strings.HasSuffix(path, "/config.xml") {
@@ -153,7 +142,6 @@ func (c *Client) Get(path string, query url.Values) ([]byte, error) {
 	return readAllLimited(resp.Body)
 }
 
-// GetRaw performs a raw GET request without appending /api/json.
 func (c *Client) GetRaw(path string, query url.Values) ([]byte, error) {
 	resp, err := c.doRequest(requestOptions{
 		method: "GET",
@@ -172,7 +160,6 @@ func (c *Client) GetRaw(path string, query url.Values) ([]byte, error) {
 	return readAllLimited(resp.Body)
 }
 
-// GetRawResponse performs a raw GET and returns the response without reading the body.
 func (c *Client) GetRawResponse(path string, query url.Values) (*http.Response, error) {
 	resp, err := c.doRequest(requestOptions{
 		method: "GET",
@@ -191,7 +178,6 @@ func (c *Client) GetRawResponse(path string, query url.Values) (*http.Response, 
 	return resp, nil
 }
 
-// GetJSON performs a GET request and unmarshals the JSON response.
 func (c *Client) GetJSON(path string, query url.Values, v interface{}) error {
 	data, err := c.Get(path, query)
 	if err != nil {
@@ -200,7 +186,6 @@ func (c *Client) GetJSON(path string, query url.Values, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-// Post performs a POST request with no body.
 func (c *Client) Post(path string, query url.Values) ([]byte, error) {
 	resp, err := c.doRequest(requestOptions{
 		method: "POST",
@@ -219,7 +204,6 @@ func (c *Client) Post(path string, query url.Values) ([]byte, error) {
 	return readAllLimited(resp.Body)
 }
 
-// PostXML performs a POST request with an XML body.
 func (c *Client) PostXML(path string, query url.Values, xmlBody string) ([]byte, http.Header, error) {
 	resp, err := c.doRequest(requestOptions{
 		method:      "POST",
@@ -241,7 +225,6 @@ func (c *Client) PostXML(path string, query url.Values, xmlBody string) ([]byte,
 	return body, resp.Header, err
 }
 
-// PostForm performs a POST request with form-encoded body.
 func (c *Client) PostForm(path string, query url.Values, formData url.Values) ([]byte, error) {
 	var body io.Reader
 	var contentType string
@@ -270,7 +253,6 @@ func (c *Client) PostForm(path string, query url.Values, formData url.Values) ([
 	return readAllLimited(resp.Body)
 }
 
-// PostRaw performs a POST and returns the full response (headers included via http.Response).
 func (c *Client) PostRaw(path string, query url.Values) (*http.Response, error) {
 	resp, err := c.doRequest(requestOptions{
 		method: "POST",
@@ -298,12 +280,10 @@ func (c *Client) PostRaw(path string, query url.Values) (*http.Response, error) 
 	return resp, nil
 }
 
-// BaseURL returns the client's base URL.
 func (c *Client) BaseURL() string {
 	return c.baseURL
 }
 
-// TreeParam is a helper to build ?tree= query values.
 func TreeParam(tree string) url.Values {
 	if tree == "" {
 		return nil
@@ -311,12 +291,10 @@ func TreeParam(tree string) url.Values {
 	return url.Values{"tree": {tree}}
 }
 
-// DepthParam is a helper to build ?depth= query values.
 func DepthParam(depth int) url.Values {
 	return url.Values{"depth": {fmt.Sprintf("%d", depth)}}
 }
 
-// MergeQuery merges multiple url.Values into one.
 func MergeQuery(queries ...url.Values) url.Values {
 	result := url.Values{}
 	for _, q := range queries {

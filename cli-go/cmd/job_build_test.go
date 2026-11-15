@@ -15,8 +15,6 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
 )
 
-// newJobBuildTestServer creates a test server with a crumb endpoint returning 404
-// (CSRF disabled) and a custom handler mux. Returns the server, a client, and the mux.
 func newJobBuildTestServer(t *testing.T) (*httptest.Server, *client.Client, *http.ServeMux) {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -34,8 +32,6 @@ func newJobBuildTestServer(t *testing.T) (*httptest.Server, *client.Client, *htt
 	return ts, c, mux
 }
 
-// TestTriggerBuild_Basic verifies that POST /job/{name}/build returns 201 with
-// a Location header and that the queue URL is parsed correctly.
 func TestTriggerBuild_Basic(t *testing.T) {
 	ts, c, mux := newJobBuildTestServer(t)
 	defer ts.Close()
@@ -60,8 +56,6 @@ func TestTriggerBuild_Basic(t *testing.T) {
 	}
 }
 
-// TestTriggerBuild_WithParams verifies that POST /job/{name}/buildWithParameters
-// is called when parameters are provided, and that params are encoded in the query.
 func TestTriggerBuild_WithParams(t *testing.T) {
 	ts, c, mux := newJobBuildTestServer(t)
 	defer ts.Close()
@@ -98,8 +92,6 @@ func TestTriggerBuild_WithParams(t *testing.T) {
 	}
 }
 
-// TestTriggerBuild_Wait mocks queue polling (return "queued" then "executable")
-// and verifies the build number is extracted correctly.
 func TestTriggerBuild_Wait(t *testing.T) {
 	ts, c, mux := newJobBuildTestServer(t)
 	defer ts.Close()
@@ -110,7 +102,6 @@ func TestTriggerBuild_Wait(t *testing.T) {
 		queueCallCount++
 		w.Header().Set("Content-Type", "application/json")
 		if queueCallCount == 1 {
-			// First call: still queued
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"id":         44,
 				"why":        "Waiting for executor",
@@ -119,7 +110,6 @@ func TestTriggerBuild_Wait(t *testing.T) {
 				"executable": map[string]interface{}{},
 			})
 		} else {
-			// Second call: build started
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"id": 44,
 				"executable": map[string]interface{}{
@@ -142,14 +132,12 @@ func TestTriggerBuild_Wait(t *testing.T) {
 	}
 }
 
-// TestTriggerBuild_WaitTimeout mocks a slow queue and verifies timeout error.
 func TestTriggerBuild_WaitTimeout(t *testing.T) {
 	ts, c, mux := newJobBuildTestServer(t)
 	defer ts.Close()
 
 	mux.HandleFunc("/queue/item/45/api/json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Always return "still queued" to trigger timeout
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"id":         45,
 			"why":        "Waiting for executor",
@@ -168,8 +156,6 @@ func TestTriggerBuild_WaitTimeout(t *testing.T) {
 	}
 }
 
-// TestTriggerBuild_Follow mocks the progressive text API with two chunks
-// and verifies output is captured correctly.
 func TestTriggerBuild_Follow(t *testing.T) {
 	callCount := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -190,7 +176,6 @@ func TestTriggerBuild_Follow(t *testing.T) {
 				fmt.Fprint(w, "Building step 1...\n")
 			case start == "50":
 				w.Header().Set("X-Text-Size", "100")
-				// No X-More-Data -> done
 				w.WriteHeader(http.StatusOK)
 				fmt.Fprint(w, "Finished: SUCCESS\n")
 			default:
@@ -223,7 +208,6 @@ func TestTriggerBuild_Follow(t *testing.T) {
 	}
 }
 
-// TestTriggerBuild_WaitAndFollow tests the full flow: trigger -> queue -> start -> stream -> complete.
 func TestTriggerBuild_WaitAndFollow(t *testing.T) {
 	queueCallCount := 0
 	buildCallCount := 0
@@ -299,7 +283,6 @@ func TestTriggerBuild_WaitAndFollow(t *testing.T) {
 		t.Errorf("expected result SUCCESS, got %q", build.Result)
 	}
 
-	// Now stream the log
 	var buf bytes.Buffer
 	err = c.StreamBuildLog("my-pipeline", 7, &buf)
 	if err != nil {
@@ -310,8 +293,6 @@ func TestTriggerBuild_WaitAndFollow(t *testing.T) {
 	}
 }
 
-// TestTriggerBuild_FailedBuild verifies that a build completing with FAILURE
-// result is reported correctly.
 func TestTriggerBuild_FailedBuild(t *testing.T) {
 	queueCallCount := 0
 
@@ -357,7 +338,6 @@ func TestTriggerBuild_FailedBuild(t *testing.T) {
 		t.Fatalf("TriggerBuildAndWait failed: %v", err)
 	}
 
-	// The build completed -- the client should return it even with FAILURE result
 	if build.Result != "FAILURE" {
 		t.Errorf("expected result FAILURE, got %q", build.Result)
 	}
@@ -366,8 +346,6 @@ func TestTriggerBuild_FailedBuild(t *testing.T) {
 	}
 }
 
-// TestStreamBuildLog_ContextTimeout verifies that StreamBuildLog respects context
-// cancellation and returns cleanly with partial output.
 func TestStreamBuildLog_ContextTimeout(t *testing.T) {
 	callCount := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -377,7 +355,7 @@ func TestStreamBuildLog_ContextTimeout(t *testing.T) {
 		}
 		callCount++
 		w.Header().Set("X-Text-Size", fmt.Sprintf("%d", callCount*100))
-		w.Header().Set("X-More-Data", "true") // Always more data
+		w.Header().Set("X-More-Data", "true")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Chunk %d\n", callCount)
 	}))
@@ -394,7 +372,6 @@ func TestStreamBuildLog_ContextTimeout(t *testing.T) {
 		t.Fatalf("expected nil error on context timeout, got: %v", err)
 	}
 
-	// We should have gotten at least some partial output
 	output := buf.String()
 	if !strings.Contains(output, "Chunk 1") {
 		t.Errorf("expected at least 'Chunk 1' in partial output, got %q", output)

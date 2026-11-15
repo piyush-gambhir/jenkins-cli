@@ -56,7 +56,6 @@ Examples:
 				return fmt.Errorf("listing builds: %w", err)
 			}
 
-			// Filter by status if specified
 			if status != "" {
 				statusUpper := strings.ToUpper(status)
 				var filtered []client.Build

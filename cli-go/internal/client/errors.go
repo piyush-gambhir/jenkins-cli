@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// APIError represents an error response from the Jenkins API.
 type APIError struct {
 	StatusCode int
 	Status     string
@@ -21,9 +20,7 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("jenkins API error: %s (status %d) url=%s", e.Status, e.StatusCode, e.URL)
 }
 
-// parseErrorBody attempts to extract a meaningful error message from Jenkins HTML error pages.
 func parseErrorBody(body string) string {
-	// Try to find error message in <h1> or <h2> tags
 	for _, tag := range []string{"h1", "h2"} {
 		re := regexp.MustCompile(fmt.Sprintf(`<%s>(.*?)</%s>`, tag, tag))
 		matches := re.FindStringSubmatch(body)
@@ -38,12 +35,10 @@ func parseErrorBody(body string) string {
 		}
 	}
 
-	// Try to find <p> with error text
 	re := regexp.MustCompile(`<p>(.*?)</p>`)
 	matches := re.FindStringSubmatch(body)
 	if len(matches) > 1 {
 		msg := strings.TrimSpace(matches[1])
-		// strip HTML tags from inner content
 		tagRe := regexp.MustCompile(`<[^>]*>`)
 		msg = tagRe.ReplaceAllString(msg, "")
 		if msg != "" {
@@ -51,7 +46,6 @@ func parseErrorBody(body string) string {
 		}
 	}
 
-	// Try to find the <title> tag
 	re = regexp.MustCompile(`<title>(.*?)</title>`)
 	matches = re.FindStringSubmatch(body)
 	if len(matches) > 1 {
@@ -61,7 +55,6 @@ func parseErrorBody(body string) string {
 		}
 	}
 
-	// Truncate raw body if nothing meaningful found
 	body = strings.TrimSpace(body)
 	if len(body) > 200 {
 		return body[:200] + "..."

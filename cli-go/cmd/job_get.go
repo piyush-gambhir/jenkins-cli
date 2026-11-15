@@ -60,7 +60,6 @@ Examples:
 					fmt.Fprintf(os.Stdout, "  Health:      %s (score: %d%%)\n", hr.Description, hr.Score)
 				}
 
-				// Show parameters if any
 				for _, prop := range job.Property {
 					if len(prop.ParameterDefinitions) > 0 {
 						fmt.Fprintf(os.Stdout, "  Parameters:\n")
@@ -73,7 +72,6 @@ Examples:
 					}
 				}
 
-				// Show child jobs if folder
 				if len(job.Jobs) > 0 {
 					fmt.Fprintf(os.Stdout, "  Jobs:\n")
 					for _, j := range job.Jobs {

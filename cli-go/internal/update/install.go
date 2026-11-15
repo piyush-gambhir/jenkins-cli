@@ -22,31 +22,22 @@ import (
 )
 
 const (
-	// projectName matches project_name in cli-go/.goreleaser.yaml, which
-	// names the archives <project>_<os>_<arch>.tar.gz (.zip on Windows).
 	projectName      = "jenkins-cli"
 	installScriptURL = "https://raw.githubusercontent.com/piyush-gambhir/jenkins-cli/main/install.sh"
 	maxChecksumBytes = 1 << 20
 	downloadTimeout  = 120 * time.Second
 )
 
-// maxArtifactBytes caps both the downloaded archive and the extracted
-// binary; tests lower it.
 var maxArtifactBytes int64 = 256 << 20
 
-// Installer downloads a release archive, verifies it against the release's
-// checksums.txt, and replaces the executable at ExecPath. Any failure leaves
-// the existing executable in place.
 type Installer struct {
 	GOOS, GOARCH string
-	ExecPath     string // resolved path of the running executable
-	BaseURL      string // release download host, https://github.com by default
+	ExecPath     string
+	BaseURL      string
 	Client       *http.Client
-	// Rename is os.Rename; tests replace it to simulate failures.
-	Rename func(oldpath, newpath string) error
+	Rename       func(oldpath, newpath string) error
 }
 
-// NewInstaller returns an installer for the running platform.
 func NewInstaller(execPath string) *Installer {
 	return &Installer{
 		GOOS:     runtime.GOOS,
@@ -55,7 +46,6 @@ func NewInstaller(execPath string) *Installer {
 		BaseURL:  "https://github.com",
 		Client: &http.Client{
 			Timeout: downloadTimeout,
-			// Release assets redirect to a CDN; never follow a downgrade to http.
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				if len(via) >= 10 {
 					return errors.New("too many redirects")
@@ -70,8 +60,6 @@ func NewInstaller(execPath string) *Installer {
 	}
 }
 
-// NotWritableError means the executable's directory cannot be written, so
-// the binary cannot be replaced.
 type NotWritableError struct {
 	Dir  string
 	GOOS string
@@ -94,7 +82,6 @@ func (e *NotWritableError) Error() string {
 
 func (e *NotWritableError) Unwrap() error { return e.Err }
 
-// ArchiveName is the GoReleaser archive for the installer's platform.
 func (in *Installer) ArchiveName() string {
 	ext := "tar.gz"
 	if in.GOOS == "windows" {
@@ -103,7 +90,6 @@ func (in *Installer) ArchiveName() string {
 	return fmt.Sprintf("%s_%s_%s.%s", projectName, in.GOOS, in.GOARCH, ext)
 }
 
-// BinaryName is the executable name inside the archive.
 func (in *Installer) BinaryName() string {
 	if in.GOOS == "windows" {
 		return Binary + ".exe"
@@ -111,8 +97,6 @@ func (in *Installer) BinaryName() string {
 	return Binary
 }
 
-// Install downloads version, verifies its SHA-256 checksum, and swaps it in
-// for the executable at ExecPath.
 func (in *Installer) Install(ctx context.Context, version string) error {
 	version = NormalizeVersion(version)
 	if !releaseVersion.MatchString(version) {
@@ -186,7 +170,6 @@ func (in *Installer) download(ctx context.Context, url string, dst io.Writer, li
 	return copyLimited(dst, resp.Body, limit)
 }
 
-// copyLimited copies src to dst and fails if src is larger than limit.
 func copyLimited(dst io.Writer, src io.Reader, limit int64) error {
 	n, err := io.Copy(dst, io.LimitReader(src, limit+1))
 	if err != nil {
@@ -198,8 +181,6 @@ func copyLimited(dst io.Writer, src io.Reader, limit int64) error {
 	return nil
 }
 
-// checksumFor finds archive's SHA-256 in a GoReleaser checksums.txt
-// ("<hex>  <name>" per line).
 func checksumFor(sums []byte, archive string) (string, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(sums))
 	for scanner.Scan() {
@@ -219,9 +200,6 @@ func checksumFor(sums []byte, archive string) (string, error) {
 	return "", fmt.Errorf("no checksum for %s in checksums.txt; refusing to install (is there a release build for this platform?)", archive)
 }
 
-// extract writes only the expected binary from the archive into a new temp
-// file in dir and returns its path. Entries with unsafe paths, and a binary
-// entry that is not a regular file, make the whole archive invalid.
 func (in *Installer) extract(archivePath, dir string) (string, error) {
 	out, err := os.CreateTemp(dir, "."+Binary+"-update-*")
 	if err != nil {
@@ -249,8 +227,6 @@ func (in *Installer) extract(archivePath, dir string) (string, error) {
 	return tmp, nil
 }
 
-// entryIsBinary validates an archive entry name and reports whether it is
-// the binary (at the archive root or in a subdirectory).
 func entryIsBinary(name, binary string) (bool, error) {
 	if name == "" || strings.Contains(name, `\`) || path.IsAbs(name) {
 		return false, fmt.Errorf("unsafe path %q in archive", name)
@@ -332,10 +308,6 @@ func extractZip(archivePath, binary string, out io.Writer) error {
 	return fmt.Errorf("%s not found in archive", binary)
 }
 
-// replace moves newPath over ExecPath. On Unix a rename replaces the file
-// atomically. Windows cannot overwrite a running .exe but can rename it, so
-// the old binary moves aside to <exe>.old (deleted on a later start) and is
-// moved back if the new one cannot be put in place.
 func (in *Installer) replace(newPath string) error {
 	if in.GOOS != "windows" {
 		if err := in.Rename(newPath, in.ExecPath); err != nil {
