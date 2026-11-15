@@ -6,7 +6,6 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
 )
 
-// build artifacts lists in read-only mode but must not download files there.
 func TestArtifactDownloadIsALocalWriteInReadOnlyMode(t *testing.T) {
 	cmd := newBuildArtifactsCmd()
 	profile := &config.Profile{ReadOnly: true}

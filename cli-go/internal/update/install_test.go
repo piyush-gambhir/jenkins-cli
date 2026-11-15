@@ -23,8 +23,8 @@ import (
 type archiveEntry struct {
 	name     string
 	body     string
-	typeflag byte   // tar only; 0 means a regular file
-	mode     uint32 // zip only; 0 means a regular file
+	typeflag byte
+	mode     uint32
 }
 
 func makeTarGz(t *testing.T, entries ...archiveEntry) []byte {
@@ -85,8 +85,6 @@ func sha(b []byte) string {
 	return hex.EncodeToString(s[:])
 }
 
-// releaseServer serves one release's archive and checksums.txt and counts
-// requests.
 func releaseServer(t *testing.T, version, archiveName string, archive []byte, checksums string) (string, *atomic.Int32) {
 	t.Helper()
 	var hits atomic.Int32
@@ -106,8 +104,6 @@ func releaseServer(t *testing.T, version, archiveName string, archive []byte, ch
 	return srv.URL, &hits
 }
 
-// setupInstall writes an "old" executable and returns an installer for goos
-// pointed at a release server.
 func setupInstall(t *testing.T, goos string, archive []byte, checksums func(name string, archive []byte) string) (*Installer, *atomic.Int32) {
 	t.Helper()
 	in := &Installer{GOOS: goos, GOARCH: "amd64", Rename: os.Rename, Client: http.DefaultClient}
@@ -175,7 +171,6 @@ func TestInstallReplacesUnixBinary(t *testing.T) {
 func TestInstallWindowsMovesRunningBinaryAside(t *testing.T) {
 	archive := makeZip(t, archiveEntry{name: "README.md", body: "readme"}, archiveEntry{name: "jenkins.exe", body: "new exe"})
 	in, _ := setupInstall(t, "windows", archive, goodSums)
-	// A leftover from an earlier update must not block this one.
 	if err := os.WriteFile(in.ExecPath+".old", []byte("older exe"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +288,6 @@ func TestInstallEnforcesSizeLimit(t *testing.T) {
 	old := maxArtifactBytes
 	maxArtifactBytes = 4096
 	t.Cleanup(func() { maxArtifactBytes = old })
-	// The archive is small, but the binary inside expands past the limit.
 	archive := makeTarGz(t, archiveEntry{name: "jenkins", body: strings.Repeat("a", 100000)})
 	if int64(len(archive)) > maxArtifactBytes {
 		t.Fatalf("compressed test archive is %d bytes, over the limit", len(archive))

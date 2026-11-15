@@ -9,7 +9,6 @@ import (
 )
 
 func TestLoadConfig_Empty(t *testing.T) {
-	// Point config to a temp dir that has no config file
 	tmpDir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 
@@ -110,7 +109,6 @@ func TestSaveConfig(t *testing.T) {
 		t.Fatalf("unexpected error saving: %v", err)
 	}
 
-	// Read back
 	loaded, err := Load()
 	if err != nil {
 		t.Fatalf("unexpected error loading: %v", err)
@@ -159,7 +157,6 @@ func TestAddProfile(t *testing.T) {
 		t.Errorf("expected username 'new-user', got %q", p.Username)
 	}
 
-	// Test overwrite
 	SetProfile(cfg, "new-profile", Profile{
 		URL:      "http://updated:8080",
 		Username: "updated-user",
@@ -244,7 +241,6 @@ func TestResolveAuth_EnvWins(t *testing.T) {
 		return "", false
 	}
 
-	// No flags set
 	flags := FlagValues{}
 
 	profile, err := ResolveAuth(flags, envLookup, cfg, "")
@@ -273,7 +269,6 @@ func TestResolveAuthRejectsMissingProfile(t *testing.T) {
 	}
 }
 
-// TestSaveConfig_RoundTrip verifies YAML serialization round-trip fidelity.
 func TestSaveConfig_RoundTrip(t *testing.T) {
 	original := &Config{
 		CurrentProfile: "test",

@@ -48,7 +48,6 @@ Examples:
 			}
 
 			if outFormat == output.FormatTable {
-				// Sort keys for consistent output
 				keys := make([]string, 0, len(envVars))
 				for k := range envVars {
 					keys = append(keys, k)

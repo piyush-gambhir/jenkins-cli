@@ -11,14 +11,12 @@ import (
 )
 
 func TestVerboseTransport_LogsRequestAndResponse(t *testing.T) {
-	// Create a test server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	}))
 	defer ts.Close()
 
-	// Capture stderr
 	oldStderr := os.Stderr
 	r, w, _ := os.Pipe()
 	os.Stderr = w
@@ -31,7 +29,6 @@ func TestVerboseTransport_LogsRequestAndResponse(t *testing.T) {
 
 	c := NewClient(profile, true)
 
-	// Make a request
 	req, err := http.NewRequest("GET", ts.URL+"/test", nil)
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
@@ -42,7 +39,6 @@ func TestVerboseTransport_LogsRequestAndResponse(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	// Restore stderr and read captured output
 	w.Close()
 	os.Stderr = oldStderr
 
@@ -65,22 +61,17 @@ func TestNewClient_WithoutVerbose(t *testing.T) {
 		Token:    "test-token",
 	}
 
-	// Should not panic with no verbose arg
 	c := NewClient(profile)
 	if c == nil {
 		t.Fatal("expected non-nil client")
 	}
 
-	// Should not panic with verbose=false
 	c2 := NewClient(profile, false)
 	if c2 == nil {
 		t.Fatal("expected non-nil client with verbose=false")
 	}
 }
 
-// TestVerboseTransport_RedactsAuthHeaders verifies that Authorization and Cookie
-// headers are redacted in verbose output, while other headers like Jenkins-Crumb
-// remain visible.
 func TestVerboseTransport_RedactsAuthHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -88,7 +79,6 @@ func TestVerboseTransport_RedactsAuthHeaders(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	// Capture stderr
 	oldStderr := os.Stderr
 	r, w, _ := os.Pipe()
 	os.Stderr = w
@@ -122,7 +112,6 @@ func TestVerboseTransport_RedactsAuthHeaders(t *testing.T) {
 	n, _ := r.Read(buf)
 	output := string(buf[:n])
 
-	// Authorization header should be redacted
 	if strings.Contains(output, "super-secret-token") {
 		t.Error("expected Authorization header value to be redacted, but token is visible in output")
 	}
@@ -130,7 +119,6 @@ func TestVerboseTransport_RedactsAuthHeaders(t *testing.T) {
 		t.Errorf("expected 'Authorization: [REDACTED]' in output, got:\n%s", output)
 	}
 
-	// Cookie header should be redacted
 	if strings.Contains(output, "abc123") {
 		t.Error("expected Cookie header value to be redacted, but session value is visible")
 	}
@@ -138,18 +126,15 @@ func TestVerboseTransport_RedactsAuthHeaders(t *testing.T) {
 		t.Errorf("expected 'Cookie: [REDACTED]' in output, got:\n%s", output)
 	}
 
-	// Jenkins-Crumb should remain visible
 	if !strings.Contains(output, "crumb-value-123") {
 		t.Errorf("expected Jenkins-Crumb to remain visible, got:\n%s", output)
 	}
 
-	// Content-Type should remain visible
 	if !strings.Contains(output, "application/json") {
 		t.Errorf("expected Content-Type to remain visible, got:\n%s", output)
 	}
 }
 
-// TestRedactAuthHeaders_Unit tests the redactAuthHeaders function directly.
 func TestRedactAuthHeaders_Unit(t *testing.T) {
 	headers := http.Header{
 		"Authorization": {"Basic dGVzdDp0b2tlbg=="},
@@ -161,7 +146,6 @@ func TestRedactAuthHeaders_Unit(t *testing.T) {
 
 	redacted := redactAuthHeaders(headers)
 
-	// Auth headers should be redacted
 	if v := redacted.Get("Authorization"); v != "[REDACTED]" {
 		t.Errorf("expected Authorization to be [REDACTED], got %q", v)
 	}
@@ -169,7 +153,6 @@ func TestRedactAuthHeaders_Unit(t *testing.T) {
 		t.Errorf("expected Cookie to be [REDACTED], got %q", v)
 	}
 
-	// Non-auth headers should remain
 	if v := redacted.Get("Content-Type"); v != "application/json" {
 		t.Errorf("expected Content-Type 'application/json', got %q", v)
 	}

@@ -51,7 +51,6 @@ Examples:
 				return fmt.Errorf("listing nodes: %w", err)
 			}
 
-			// Filter by online/offline status
 			if offlineOnly {
 				var filtered []client.Node
 				for _, n := range nodes {

@@ -10,7 +10,6 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
 )
 
-// newJobTestServer creates a test server with crumb disabled and a custom handler.
 func newJobTestServer(handler http.HandlerFunc) (*httptest.Server, *Client) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/crumbIssuer/api/json", func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +56,6 @@ func TestListJobs(t *testing.T) {
 
 func TestListJobsInFolder(t *testing.T) {
 	ts, c := newJobTestServer(func(w http.ResponseWriter, r *http.Request) {
-		// folder "my-folder" should become /job/my-folder/api/json
 		if r.URL.Path != "/job/my-folder/api/json" {
 			t.Errorf("expected path /job/my-folder/api/json, got %q", r.URL.Path)
 		}
@@ -82,7 +80,6 @@ func TestListJobsInFolder(t *testing.T) {
 
 func TestGetJob(t *testing.T) {
 	ts, c := newJobTestServer(func(w http.ResponseWriter, r *http.Request) {
-		// "my-folder/my-job" -> /job/my-folder/job/my-job/api/json
 		if r.URL.Path != "/job/my-folder/job/my-job/api/json" {
 			t.Errorf("expected path /job/my-folder/job/my-job/api/json, got %q", r.URL.Path)
 		}
@@ -110,7 +107,6 @@ func TestGetJob(t *testing.T) {
 func TestGetJobConfig(t *testing.T) {
 	expectedXML := `<?xml version="1.0"?><project><description>test</description></project>`
 	ts, c := newJobTestServer(func(w http.ResponseWriter, r *http.Request) {
-		// GetJobConfig uses GetRaw, path should be /job/my-job/config.xml
 		if r.URL.Path != "/job/my-job/config.xml" {
 			t.Errorf("expected path /job/my-job/config.xml, got %q", r.URL.Path)
 		}

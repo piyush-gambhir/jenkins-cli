@@ -6,7 +6,6 @@ import (
 	"net/url"
 )
 
-// Node represents a Jenkins node/agent.
 type Node struct {
 	DisplayName         string          `json:"displayName"`
 	Description         string          `json:"description"`
@@ -23,13 +22,11 @@ type Node struct {
 	Executors           []Executor      `json:"executors"`
 }
 
-// OfflineCause represents why a node is offline.
 type OfflineCause struct {
 	Class       string `json:"_class"`
 	Description string `json:"description"`
 }
 
-// Executor represents an executor on a node.
 type Executor struct {
 	Idle              bool      `json:"idle"`
 	Number            int       `json:"number"`
@@ -37,14 +34,12 @@ type Executor struct {
 	CurrentExecutable *BuildRef `json:"currentExecutable"`
 }
 
-// ComputerResponse wraps the computer (node) list response.
 type ComputerResponse struct {
 	Computers      []Node `json:"computer"`
 	TotalExecutors int    `json:"totalExecutors"`
 	BusyExecutors  int    `json:"busyExecutors"`
 }
 
-// ListNodes lists all nodes.
 func (c *Client) ListNodes() ([]Node, error) {
 	data, err := c.Get("/computer", nil)
 	if err != nil {
@@ -59,7 +54,6 @@ func (c *Client) ListNodes() ([]Node, error) {
 	return resp.Computers, nil
 }
 
-// GetNode gets details about a specific node.
 func (c *Client) GetNode(name string) (*Node, error) {
 	path := fmt.Sprintf("/computer/%s", url.PathEscape(name))
 
@@ -76,7 +70,6 @@ func (c *Client) GetNode(name string) (*Node, error) {
 	return &node, nil
 }
 
-// CreateNode creates a new permanent agent node.
 func (c *Client) CreateNode(name string, numExecutors int, remoteFSRoot, labels string) error {
 	nodeJSON := fmt.Sprintf(`{
 		"name": "%s",
@@ -106,7 +99,6 @@ func (c *Client) CreateNode(name string, numExecutors int, remoteFSRoot, labels 
 	return nil
 }
 
-// DeleteNode deletes a node.
 func (c *Client) DeleteNode(name string) error {
 	path := fmt.Sprintf("/computer/%s/doDelete", url.PathEscape(name))
 
@@ -118,7 +110,6 @@ func (c *Client) DeleteNode(name string) error {
 	return nil
 }
 
-// ToggleOffline takes a node offline or brings it online.
 func (c *Client) ToggleOffline(name string, offline bool, message string) error {
 	var path string
 	if offline {
@@ -140,7 +131,6 @@ func (c *Client) ToggleOffline(name string, offline bool, message string) error 
 	return nil
 }
 
-// GetNodeLog gets the agent log for a node.
 func (c *Client) GetNodeLog(name string) (string, error) {
 	path := fmt.Sprintf("/computer/%s/logText/progressiveText", url.PathEscape(name))
 

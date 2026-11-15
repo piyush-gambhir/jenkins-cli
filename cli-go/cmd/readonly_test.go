@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// checkReadOnly simulates the read-only enforcement logic from PersistentPreRunE.
 func checkReadOnly(readOnly bool, cmd *cobra.Command) error {
 	if readOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
 		return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())

@@ -7,12 +7,10 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// YAMLFormatter outputs data as YAML.
 type YAMLFormatter struct {
 	Writer io.Writer
 }
 
-// Format outputs data as YAML.
 func (f *YAMLFormatter) Format(data interface{}) error {
 	b, err := yaml.Marshal(data)
 	if err != nil {

@@ -5,10 +5,8 @@ dist/
 jenkins-cli
 *.exe
 
-# Wrangler local cache
 .wrangler/
 
-# env
 .env
 .env.local
 .env.deploy
@@ -17,5 +15,4 @@ jenkins-cli
 !.env.example
 !.env.deploy.example
 
-# Local bundle graph exports
 /.bundle-analysis/

@@ -5,10 +5,6 @@ import (
 	"testing"
 )
 
-// Regression test: defaultParameterValue is an object (a ParameterValue with
-// name/value), null, or absent in the Jenkins API — never a plain string.
-// Typing it as string made `pipeline input-list` fail for any input step
-// that declares parameters.
 func TestListPipelineInputs_ObjectDefaultParameterValue(t *testing.T) {
 	ts, c := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/job/my-pipeline/7/wfapi/pendingInputActions" {
@@ -76,8 +72,6 @@ func TestListPipelineInputs_ObjectDefaultParameterValue(t *testing.T) {
 	}
 }
 
-// Inputs may also be empty or absent entirely (plain `input` step without
-// parameters).
 func TestListPipelineInputs_NoParams(t *testing.T) {
 	ts, c := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

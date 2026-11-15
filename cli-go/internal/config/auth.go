@@ -6,26 +6,21 @@ import (
 	"strings"
 )
 
-// EnvLookupFunc is a function that looks up an environment variable.
 type EnvLookupFunc func(string) (string, bool)
 
-// FlagValues holds values passed via CLI flags.
 type FlagValues struct {
 	Server   string
 	User     string
 	Token    string
 	Insecure bool
 
-	// Whether flags were explicitly set
 	ServerSet   bool
 	UserSet     bool
 	TokenSet    bool
 	InsecureSet bool
 }
 
-// ResolveAuth resolves authentication details with priority: flags > env > config profile.
 func ResolveAuth(flags FlagValues, envLookup EnvLookupFunc, cfg *Config, profileName string) (Profile, error) {
-	// Start with config profile as base
 	var base Profile
 
 	pName := profileName
@@ -40,7 +35,6 @@ func ResolveAuth(flags FlagValues, envLookup EnvLookupFunc, cfg *Config, profile
 		base = p
 	}
 
-	// Layer env vars
 	if envLookup != nil {
 		if v, ok := envLookup("JENKINS_URL"); ok && v != "" {
 			base.URL = v
@@ -65,7 +59,6 @@ func ResolveAuth(flags FlagValues, envLookup EnvLookupFunc, cfg *Config, profile
 		}
 	}
 
-	// Layer flags (highest priority)
 	if flags.ServerSet && flags.Server != "" {
 		base.URL = flags.Server
 	}
@@ -79,7 +72,6 @@ func ResolveAuth(flags FlagValues, envLookup EnvLookupFunc, cfg *Config, profile
 		base.Insecure = flags.Insecure
 	}
 
-	// Normalize URL
 	base.URL = strings.TrimRight(base.URL, "/")
 
 	return base, nil

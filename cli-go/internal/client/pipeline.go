@@ -8,7 +8,6 @@ import (
 	jpath "github.com/piyush-gambhir/jenkins-cli/cli-go/internal/path"
 )
 
-// PipelineInput represents a pending pipeline input.
 type PipelineInput struct {
 	ID          string               `json:"id"`
 	Message     string               `json:"message"`
@@ -20,23 +19,17 @@ type PipelineInput struct {
 	RedirectURL string               `json:"redirectApprovalUrl"`
 }
 
-// PipelineInputParam represents an input parameter.
 type PipelineInputParam struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	// DefaultValue is an object in the Jenkins API (e.g.
-	// {"_class":"hudson.model.StringParameterValue","name":"X","value":"y"}),
-	// null, or absent — so it must not be typed as string.
+	Name         string      `json:"name"`
+	Type         string      `json:"type"`
 	DefaultValue interface{} `json:"defaultParameterValue"`
 	Description  string      `json:"description"`
 }
 
-// PipelineInputResponse wraps a list of pending inputs.
 type PipelineInputResponse struct {
 	Inputs []PipelineInput `json:"inputActions,omitempty"`
 }
 
-// ValidateJenkinsfile validates a Jenkinsfile.
 func (c *Client) ValidateJenkinsfile(content string) (string, error) {
 	formData := url.Values{
 		"jenkinsfile": {content},
@@ -50,7 +43,6 @@ func (c *Client) ValidateJenkinsfile(content string) (string, error) {
 	return string(data), nil
 }
 
-// ListPipelineInputs lists pending input actions for a build.
 func (c *Client) ListPipelineInputs(jobPath string, buildNumber int) ([]PipelineInput, error) {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/wfapi/pendingInputActions", buildNumber)
 
@@ -67,7 +59,6 @@ func (c *Client) ListPipelineInputs(jobPath string, buildNumber int) ([]Pipeline
 	return inputs, nil
 }
 
-// SubmitPipelineInput submits (proceeds) an input action.
 func (c *Client) SubmitPipelineInput(jobPath string, buildNumber int, inputID string, params map[string]string) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/input/%s/proceed", buildNumber, url.PathEscape(inputID))
 
@@ -88,7 +79,6 @@ func (c *Client) SubmitPipelineInput(jobPath string, buildNumber int, inputID st
 	return nil
 }
 
-// AbortPipelineInput aborts an input action.
 func (c *Client) AbortPipelineInput(jobPath string, buildNumber int, inputID string) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/input/%s/abort", buildNumber, url.PathEscape(inputID))
 

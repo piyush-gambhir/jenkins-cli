@@ -6,7 +6,6 @@ import (
 	"net/url"
 )
 
-// Plugin represents a Jenkins plugin.
 type Plugin struct {
 	ShortName     string      `json:"shortName"`
 	LongName      string      `json:"longName"`
@@ -20,39 +19,31 @@ type Plugin struct {
 	BackupVersion string      `json:"backupVersion"`
 }
 
-// PluginDep represents a plugin dependency.
 type PluginDep struct {
 	ShortName string `json:"shortName"`
 	Version   string `json:"version"`
 	Optional  bool   `json:"optional"`
 }
 
-// PluginListResponse wraps a list of plugins.
 type PluginListResponse struct {
 	Plugins []Plugin `json:"plugins"`
 }
 
-// PluginInstallStatus represents the status of a plugin installation.
 type PluginInstallStatus struct {
 	Name    string `json:"name"`
 	Status  string `json:"status"`
 	Version string `json:"version"`
 }
 
-// UpdateCenter represents update center info.
-// Update center entries identify plugins via "name" (not "shortName" as in
-// the pluginManager API), and "version" is the version available for update.
 type UpdateCenter struct {
 	AvailableUpdates []UpdateCenterPlugin `json:"updates"`
 }
 
-// UpdateCenterPlugin is a plugin entry from the update center.
 type UpdateCenterPlugin struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-// ListPlugins lists all installed plugins.
 func (c *Client) ListPlugins() ([]Plugin, error) {
 	data, err := c.Get("/pluginManager", DepthParam(1))
 	if err != nil {
@@ -67,7 +58,6 @@ func (c *Client) ListPlugins() ([]Plugin, error) {
 	return resp.Plugins, nil
 }
 
-// GetPlugin gets details about a specific plugin.
 func (c *Client) GetPlugin(shortName string) (*Plugin, error) {
 	plugins, err := c.ListPlugins()
 	if err != nil {
@@ -83,7 +73,6 @@ func (c *Client) GetPlugin(shortName string) (*Plugin, error) {
 	return nil, fmt.Errorf("plugin %q not found", shortName)
 }
 
-// InstallPlugin installs a plugin by name.
 func (c *Client) InstallPlugin(name, version string) error {
 	pluginID := name
 	if version != "" {
@@ -100,7 +89,6 @@ func (c *Client) InstallPlugin(name, version string) error {
 	return nil
 }
 
-// UninstallPlugin uninstalls a plugin.
 func (c *Client) UninstallPlugin(name string) error {
 	path := fmt.Sprintf("/pluginManager/plugin/%s/doUninstall", url.PathEscape(name))
 
@@ -112,15 +100,11 @@ func (c *Client) UninstallPlugin(name string) error {
 	return nil
 }
 
-// CheckPluginUpdates checks for available plugin updates.
 func (c *Client) CheckPluginUpdates() ([]Plugin, error) {
-	// First trigger an update check
 	_, _ = c.Post("/pluginManager/checkUpdatesServer", nil)
 
-	// Then get available updates
 	data, err := c.Get("/updateCenter", TreeParam("updates[name,version]"))
 	if err != nil {
-		// Fallback: list plugins and filter those with updates
 		plugins, err := c.ListPlugins()
 		if err != nil {
 			return nil, err

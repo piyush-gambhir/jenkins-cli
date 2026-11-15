@@ -15,10 +15,7 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/output"
 )
 
-// TestNoInputFlag_BlocksConfirmPrompt verifies that when noInputFlag is set,
-// commands that require --confirm return the appropriate error.
 func TestNoInputFlag_BlocksConfirmPrompt(t *testing.T) {
-	// Save and restore global state
 	origNoInput := noInputFlag
 	defer func() { noInputFlag = origNoInput }()
 
@@ -42,7 +39,6 @@ func TestNoInputFlag_BlocksConfirmPrompt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := tt.cmdFunc()
 
-			// Determine args to pass
 			var args []string
 			switch tt.name {
 			case "build delete":
@@ -54,10 +50,6 @@ func TestNoInputFlag_BlocksConfirmPrompt(t *testing.T) {
 				args = []string{}
 			}
 
-			// We need a minimal setup. Since these commands need jenkinsClient
-			// but we're testing the confirm/no-input check which happens BEFORE
-			// any API call, this should work for commands where !confirm triggers
-			// early. For build delete we also need client.ParseBuildNumber to work.
 			err := cmd.RunE(cmd, args)
 			if err == nil {
 				t.Fatal("expected error when no-input is set and --confirm is not provided")
@@ -70,7 +62,6 @@ func TestNoInputFlag_BlocksConfirmPrompt(t *testing.T) {
 	}
 }
 
-// TestQuietFlag_Variable verifies the quiet flag is accessible.
 func TestQuietFlag_Variable(t *testing.T) {
 	origQuiet := quietFlag
 	defer func() { quietFlag = origQuiet }()
@@ -86,23 +77,17 @@ func TestQuietFlag_Variable(t *testing.T) {
 	}
 }
 
-// TestNoInputFlag_AllowsWithConfirm verifies that when noInputFlag is set
-// AND --confirm is provided, the no-input check does not block.
-// We test the logic by verifying confirm=true skips the no-input gate.
 func TestNoInputFlag_AllowsWithConfirm(t *testing.T) {
 	origNoInput := noInputFlag
 	defer func() { noInputFlag = origNoInput }()
 
 	noInputFlag = true
 
-	// Create a job delete command and parse --confirm
 	cmd := newJobDeleteCmd()
 	if err := cmd.ParseFlags([]string{"--confirm"}); err != nil {
 		t.Fatalf("failed to parse flags: %v", err)
 	}
 
-	// We need to catch the nil-pointer panic from jenkinsClient being nil.
-	// The important thing is that we get past the no-input check.
 	var runErr error
 	panicked := false
 
@@ -115,13 +100,10 @@ func TestNoInputFlag_AllowsWithConfirm(t *testing.T) {
 		runErr = cmd.RunE(cmd, []string{"test-job"})
 	}()
 
-	// If we panicked, it means we got past the no-input check and hit the
-	// nil jenkinsClient -- which is the expected behavior.
 	if panicked {
-		return // Test passes: we got past the no-input gate
+		return
 	}
 
-	// If we didn't panic but got an error, make sure it's NOT the no-input error
 	if runErr != nil {
 		noInputErr := "interactive input required but --no-input is set. Use --confirm for destructive operations."
 		if runErr.Error() == noInputErr {
@@ -130,8 +112,6 @@ func TestNoInputFlag_AllowsWithConfirm(t *testing.T) {
 	}
 }
 
-// TestIdempotentFlags_Exist verifies that --if-not-exists and --if-exists flags exist
-// on the appropriate commands.
 func TestIdempotentFlags_Exist(t *testing.T) {
 	createCmds := []struct {
 		name    string
@@ -161,8 +141,6 @@ func TestIdempotentFlags_Exist(t *testing.T) {
 	}
 }
 
-// TestStdinFlag_FromFileAcceptsDash verifies that --from-file accepts "-" value
-// on commands that support stdin.
 func TestStdinFlag_FromFileAcceptsDash(t *testing.T) {
 	cmds := []struct {
 		name    string
@@ -183,7 +161,6 @@ func TestStdinFlag_FromFileAcceptsDash(t *testing.T) {
 			if f == nil {
 				t.Fatalf("expected --from-file flag on %s command", tt.name)
 			}
-			// Verify the usage text mentions stdin
 			if f.Usage == "" {
 				t.Fatalf("expected non-empty usage for --from-file on %s", tt.name)
 			}
@@ -191,8 +168,6 @@ func TestStdinFlag_FromFileAcceptsDash(t *testing.T) {
 	}
 }
 
-// TestStructuredJSONError verifies that errors are formatted as structured JSON
-// when the output format is JSON.
 func TestStructuredJSONError(t *testing.T) {
 	var buf bytes.Buffer
 	testErr := errors.New("job not found: my-pipeline")
@@ -212,8 +187,6 @@ func TestStructuredJSONError(t *testing.T) {
 	}
 }
 
-// TestStructuredJSONError_APIError verifies that client.APIError errors produce
-// correct structured JSON output.
 func TestStructuredJSONError_APIError(t *testing.T) {
 	var buf bytes.Buffer
 	apiErr := &client.APIError{
@@ -235,22 +208,17 @@ func TestStructuredJSONError_APIError(t *testing.T) {
 	}
 }
 
-// TestIdempotentDelete_IfExists verifies that --if-exists on delete commands
-// swallows a 404 error and returns success.
 func TestIdempotentDelete_IfExists(t *testing.T) {
-	// Create a mock server that returns 404 for delete
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/crumbIssuer/api/json" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		// Return 404 for the delete operation
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Not Found"))
 	}))
 	defer ts.Close()
 
-	// Save and restore global state
 	origClient := jenkinsClient
 	origNoInput := noInputFlag
 	origQuiet := quietFlag
@@ -268,7 +236,6 @@ func TestIdempotentDelete_IfExists(t *testing.T) {
 	noInputFlag = false
 	quietFlag = true
 
-	// Test job delete with --if-exists and --confirm
 	cmd := newJobDeleteCmd()
 	if err := cmd.ParseFlags([]string{"--confirm", "--if-exists"}); err != nil {
 		t.Fatalf("failed to parse flags: %v", err)
@@ -280,8 +247,6 @@ func TestIdempotentDelete_IfExists(t *testing.T) {
 	}
 }
 
-// TestGlobalFlags_Registered verifies that the global flags --no-input, --quiet,
-// and --verbose are registered on the root command.
 func TestGlobalFlags_Registered(t *testing.T) {
 	flags := []struct {
 		name      string

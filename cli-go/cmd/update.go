@@ -22,8 +22,6 @@ type releaseInstaller interface {
 	Install(ctx context.Context, version string) error
 }
 
-// Seams for tests: they keep update off the GitHub API, the real executable,
-// and the real terminal.
 var (
 	checkForUpdate  = update.CheckForUpdate
 	installMethod   = update.CurrentInstallMethod
@@ -32,7 +30,6 @@ var (
 	stdinIsTerminal = func() bool { return term.IsTerminal(int(os.Stdin.Fd())) }
 )
 
-// updateCheckResult is the `update --check` output.
 type updateCheckResult struct {
 	CurrentVersion  string `json:"current_version" yaml:"current_version"`
 	LatestVersion   string `json:"latest_version" yaml:"latest_version"`
@@ -83,8 +80,6 @@ Examples:
 			if err != nil {
 				return err
 			}
-			// PersistentPreRunE skips loadConfig for update; main.go reads this
-			// to format errors.
 			OutputFormat = outputFormat
 
 			current := update.NormalizeVersion(version.Version)
@@ -130,7 +125,6 @@ Examples:
 				fmt.Fprint(cmd.ErrOrStderr(), "Update now? [Y/n] ")
 				answer, readErr := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
 				answer = strings.ToLower(strings.TrimSpace(answer))
-				// Ctrl-D (EOF with no answer) cancels; only Enter means yes.
 				if (readErr != nil && answer == "") || (answer != "" && answer != "y" && answer != "yes") {
 					fmt.Fprintln(out, "Update cancelled.")
 					return nil
@@ -147,8 +141,6 @@ Examples:
 			if err := newInstaller(execPath).Install(cmd.Context(), info.LatestVersion); err != nil {
 				return fmt.Errorf("installing v%s: %w", info.LatestVersion, err)
 			}
-			// The forced check above already stored this release in the cache,
-			// so the notifier agrees that the new binary is up to date.
 			fmt.Fprintf(out, "Updated jenkins v%s -> v%s\nRelease notes: %s\n", current, info.LatestVersion, info.ReleaseURL)
 			return nil
 		},
@@ -187,10 +179,6 @@ func printUpdateCheck(w io.Writer, format output.Format, info *update.UpdateInfo
 	return nil
 }
 
-// readOnlyEnabled resolves read-only mode for commands that skip the normal
-// auth bootstrap: the --read-only flag, JENKINS_READ_ONLY, or the profile. It
-// fails closed: if the config or profile cannot be resolved, the caller must
-// not write.
 func readOnlyEnabled() (bool, error) {
 	if readOnlyFlag {
 		return true, nil

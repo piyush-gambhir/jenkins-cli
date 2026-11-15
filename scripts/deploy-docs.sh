@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# Build the Next.js site in web/ and deploy it as the jenkins-cli-web Worker
-# (static assets, routed at projects.piyushgambhir.com/jenkins-cli).
-# Run as `bash scripts/deploy-docs.sh`.
-#
-# Uses CLOUDFLARE_API_TOKEN from .env.deploy.production when present, otherwise
-# the local `wrangler login` session. The account is pinned in web/wrangler.jsonc.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"

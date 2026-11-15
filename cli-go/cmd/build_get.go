@@ -65,8 +65,6 @@ Examples:
 						fmt.Fprintf(os.Stdout, "    - %s\n", a.FileName)
 					}
 				}
-				// Freestyle builds expose a single changeSet; pipeline builds
-				// expose a list of changeSets. Collect items from both.
 				var changes []client.ChangeItem
 				if build.ChangeSet != nil {
 					changes = append(changes, build.ChangeSet.Items...)

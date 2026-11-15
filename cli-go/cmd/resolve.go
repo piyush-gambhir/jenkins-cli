@@ -9,7 +9,6 @@ import (
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/output"
 )
 
-// resolution describes arguments using the real parser without executing them.
 type resolution struct {
 	Command     string            `json:"command"`
 	Effect      string            `json:"effect"`
@@ -32,7 +31,6 @@ func newResolveCmd() *cobra.Command {
 		Short:              "Show the command, effect and flags that arguments would run, without running them",
 		Example:            "  jenkins commands resolve -- job list\n  jenkins commands resolve -- -o json job build my-pipeline",
 		DisableFlagParsing: true,
-		// Override root hooks to avoid config, credentials, and update checks.
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			outputFormat, OutputFormat, outFormat = "json", "json", output.FormatJSON
 			return nil
@@ -45,7 +43,7 @@ func newResolveCmd() *cobra.Command {
 					break
 				}
 			}
-			probe := cmd.Root() // nothing executes and the process exits after answering
+			probe := cmd.Root()
 			target, rest, err := probe.Find(args)
 			if err != nil || target == probe || !target.Runnable() {
 				return fmt.Errorf("arguments do not name a runnable jenkins command")

@@ -6,7 +6,6 @@ import (
 	"net/url"
 )
 
-// Credential represents a Jenkins credential.
 type Credential struct {
 	ID          string                 `json:"id"`
 	TypeName    string                 `json:"typeName"`
@@ -16,23 +15,19 @@ type Credential struct {
 	Fingerprint *CredentialFingerprint `json:"fingerprint,omitempty"`
 }
 
-// CredentialFingerprint represents credential usage info.
 type CredentialFingerprint struct {
 	Usage []CredentialUsage `json:"usage,omitempty"`
 }
 
-// CredentialUsage represents where a credential is used.
 type CredentialUsage struct {
 	Name   string          `json:"name"`
 	Ranges json.RawMessage `json:"ranges"`
 }
 
-// CredentialStore represents a credential store.
 type CredentialStore struct {
 	Domains []CredentialDomain `json:"domains"`
 }
 
-// CredentialDomain represents a credential domain.
 type CredentialDomain struct {
 	Name        string       `json:"name"`
 	Description string       `json:"description"`
@@ -40,12 +35,10 @@ type CredentialDomain struct {
 	Credentials []Credential `json:"credentials"`
 }
 
-// CredentialListResponse wraps a list of credentials.
 type CredentialListResponse struct {
 	Credentials []Credential `json:"credentials"`
 }
 
-// credentialBasePath builds the base path for credential operations.
 func credentialBasePath(store, domain string) string {
 	if store == "" {
 		store = "system"
@@ -56,7 +49,6 @@ func credentialBasePath(store, domain string) string {
 	return fmt.Sprintf("/credentials/store/%s/domain/%s", url.PathEscape(store), url.PathEscape(domain))
 }
 
-// ListCredentials lists all credentials in a store/domain.
 func (c *Client) ListCredentials(store, domain string) ([]Credential, error) {
 	path := credentialBasePath(store, domain)
 
@@ -75,7 +67,6 @@ func (c *Client) ListCredentials(store, domain string) ([]Credential, error) {
 	return resp.Credentials, nil
 }
 
-// GetCredential gets a specific credential.
 func (c *Client) GetCredential(store, domain, id string) (*Credential, error) {
 	path := credentialBasePath(store, domain) + "/credential/" + url.PathEscape(id)
 
@@ -92,7 +83,6 @@ func (c *Client) GetCredential(store, domain, id string) (*Credential, error) {
 	return &cred, nil
 }
 
-// CreateCredential creates a new credential.
 func (c *Client) CreateCredential(store, domain, configXML string) error {
 	path := credentialBasePath(store, domain) + "/createCredentials"
 
@@ -104,7 +94,6 @@ func (c *Client) CreateCredential(store, domain, configXML string) error {
 	return nil
 }
 
-// UpdateCredential updates a credential.
 func (c *Client) UpdateCredential(store, domain, id, configXML string) error {
 	path := credentialBasePath(store, domain) + "/credential/" + url.PathEscape(id) + "/config.xml"
 
@@ -116,7 +105,6 @@ func (c *Client) UpdateCredential(store, domain, id, configXML string) error {
 	return nil
 }
 
-// DeleteCredential deletes a credential.
 func (c *Client) DeleteCredential(store, domain, id string) error {
 	path := credentialBasePath(store, domain) + "/credential/" + url.PathEscape(id) + "/doDelete"
 

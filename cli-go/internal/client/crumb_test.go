@@ -83,13 +83,11 @@ func TestCrumbCache_NotExpired(t *testing.T) {
 	c := NewClient(config.Profile{URL: ts.URL, Username: "u", Token: "t"})
 	c.httpClient = ts.Client()
 
-	// First call fetches the crumb
 	crumb1, err := c.ensureCrumb()
 	if err != nil {
 		t.Fatalf("first ensureCrumb: %v", err)
 	}
 
-	// Second call should use cache
 	crumb2, err := c.ensureCrumb()
 	if err != nil {
 		t.Fatalf("second ensureCrumb: %v", err)

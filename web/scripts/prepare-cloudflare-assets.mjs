@@ -15,8 +15,6 @@ await rm(destinationRoot, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 await cp(source, destination, { recursive: true });
 
-// Wrangler only reads _redirects from the assets root, and requests arrive with
-// the /<site> prefix, so move the file up and prefix every local path.
 const nestedRedirects = path.join(destination, "_redirects");
 const redirects = await readFile(nestedRedirects, "utf8").catch((error) => {
   if (error.code === "ENOENT") return null;

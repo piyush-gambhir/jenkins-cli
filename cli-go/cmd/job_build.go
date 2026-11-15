@@ -57,7 +57,6 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			jobPath := args[0]
 
-			// Parse params
 			paramMap := make(map[string]string)
 			for _, p := range params {
 				parts := strings.SplitN(p, "=", 2)
@@ -67,7 +66,6 @@ Examples:
 				paramMap[parts[0]] = parts[1]
 			}
 
-			// Create a context with the --timeout duration to cover all phases
 			ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
 			defer cancel()
 			jenkinsClient.SetContext(ctx)
@@ -100,7 +98,6 @@ Examples:
 				return nil
 			}
 
-			// Just trigger
 			ql, err := jenkinsClient.TriggerBuild(jobPath, paramMap)
 			if err != nil {
 				return fmt.Errorf("triggering build: %w", err)
@@ -114,7 +111,6 @@ Examples:
 			}
 
 			if follow {
-				// Follow mode without wait: stream log for the new build
 				if !quietFlag {
 					fmt.Fprintf(os.Stdout, "Waiting for build to start...\n")
 				}

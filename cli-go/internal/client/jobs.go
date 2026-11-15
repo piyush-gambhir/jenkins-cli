@@ -9,7 +9,6 @@ import (
 	jpath "github.com/piyush-gambhir/jenkins-cli/cli-go/internal/path"
 )
 
-// Job represents a Jenkins job.
 type Job struct {
 	Name         string         `json:"name"`
 	URL          string         `json:"url"`
@@ -27,7 +26,6 @@ type Job struct {
 	HealthReport []HealthReport `json:"healthReport"`
 }
 
-// BuildRef is a minimal build reference.
 type BuildRef struct {
 	Number    int    `json:"number"`
 	URL       string `json:"url"`
@@ -35,13 +33,11 @@ type BuildRef struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
-// Action represents a Jenkins action.
 type Action struct {
 	Class                string            `json:"_class"`
 	ParameterDefinitions []ParamDefinition `json:"parameterDefinitions"`
 }
 
-// ParamDefinition defines a build parameter.
 type ParamDefinition struct {
 	Name         string      `json:"name"`
 	Type         string      `json:"type"`
@@ -49,24 +45,20 @@ type ParamDefinition struct {
 	DefaultValue interface{} `json:"defaultParameterValue"`
 }
 
-// Property represents a job property.
 type Property struct {
 	Class                string            `json:"_class"`
 	ParameterDefinitions []ParamDefinition `json:"parameterDefinitions"`
 }
 
-// HealthReport represents a job health report.
 type HealthReport struct {
 	Description string `json:"description"`
 	Score       int    `json:"score"`
 }
 
-// JobListResponse wraps a list of jobs.
 type JobListResponse struct {
 	Jobs []Job `json:"jobs"`
 }
 
-// ListJobs lists jobs in a folder (or root if folder is empty).
 func (c *Client) ListJobs(folder string) ([]Job, error) {
 	path := ""
 	if folder != "" {
@@ -89,7 +81,6 @@ func (c *Client) ListJobs(folder string) ([]Job, error) {
 	return resp.Jobs, nil
 }
 
-// ListJobsRecursive lists all jobs recursively.
 func (c *Client) ListJobsRecursive(folder string) ([]Job, error) {
 	jobs, err := c.ListJobs(folder)
 	if err != nil {
@@ -123,7 +114,6 @@ func isFolder(j Job) bool {
 		len(j.Jobs) > 0
 }
 
-// GetJob gets detailed info about a job.
 func (c *Client) GetJob(jobPath string) (*Job, error) {
 	path := jpath.ToJenkinsPath(jobPath)
 
@@ -140,7 +130,6 @@ func (c *Client) GetJob(jobPath string) (*Job, error) {
 	return &job, nil
 }
 
-// GetJobConfig gets the config.xml of a job.
 func (c *Client) GetJobConfig(jobPath string) (string, error) {
 	path := jpath.ToJenkinsPath(jobPath) + "/config.xml"
 
@@ -152,7 +141,6 @@ func (c *Client) GetJobConfig(jobPath string) (string, error) {
 	return string(data), nil
 }
 
-// CreateJob creates a new job in the specified folder.
 func (c *Client) CreateJob(folder, name, configXML string) error {
 	path := "/createItem"
 	if folder != "" {
@@ -169,7 +157,6 @@ func (c *Client) CreateJob(folder, name, configXML string) error {
 	return nil
 }
 
-// UpdateJobConfig updates a job's config.xml.
 func (c *Client) UpdateJobConfig(jobPath, configXML string) error {
 	path := jpath.ToJenkinsPath(jobPath) + "/config.xml"
 
@@ -181,7 +168,6 @@ func (c *Client) UpdateJobConfig(jobPath, configXML string) error {
 	return nil
 }
 
-// CopyJob copies a job.
 func (c *Client) CopyJob(srcName, destName, folder string) error {
 	path := "/createItem"
 	if folder != "" {
@@ -202,7 +188,6 @@ func (c *Client) CopyJob(srcName, destName, folder string) error {
 	return nil
 }
 
-// RenameJob renames a job.
 func (c *Client) RenameJob(jobPath, newName string) error {
 	path := jpath.ToJenkinsPath(jobPath) + "/doRename"
 	query := url.Values{"newName": {newName}}
@@ -215,7 +200,6 @@ func (c *Client) RenameJob(jobPath, newName string) error {
 	return nil
 }
 
-// DeleteJob deletes a job.
 func (c *Client) DeleteJob(jobPath string) error {
 	path := jpath.ToJenkinsPath(jobPath) + "/doDelete"
 
@@ -227,7 +211,6 @@ func (c *Client) DeleteJob(jobPath string) error {
 	return nil
 }
 
-// EnableJob enables a disabled job.
 func (c *Client) EnableJob(jobPath string) error {
 	path := jpath.ToJenkinsPath(jobPath) + "/enable"
 
@@ -239,7 +222,6 @@ func (c *Client) EnableJob(jobPath string) error {
 	return nil
 }
 
-// DisableJob disables a job.
 func (c *Client) DisableJob(jobPath string) error {
 	path := jpath.ToJenkinsPath(jobPath) + "/disable"
 
@@ -251,7 +233,6 @@ func (c *Client) DisableJob(jobPath string) error {
 	return nil
 }
 
-// WipeWorkspace wipes the workspace of a job.
 func (c *Client) WipeWorkspace(jobPath string) error {
 	path := jpath.ToJenkinsPath(jobPath) + "/doWipeOutWorkspace"
 
@@ -263,13 +244,11 @@ func (c *Client) WipeWorkspace(jobPath string) error {
 	return nil
 }
 
-// QueueLocation is the response from triggering a build.
 type QueueLocation struct {
 	QueueURL string
 	QueueID  int
 }
 
-// TriggerBuild triggers a build for a job.
 func (c *Client) TriggerBuild(jobPath string, params map[string]string) (*QueueLocation, error) {
 	jp := jpath.ToJenkinsPath(jobPath)
 
@@ -300,7 +279,6 @@ func (c *Client) TriggerBuild(jobPath string, params map[string]string) (*QueueL
 	return &QueueLocation{QueueURL: loc}, nil
 }
 
-// TriggerBuildAndWait triggers a build and waits for it to complete.
 func (c *Client) TriggerBuildAndWait(jobPath string, params map[string]string, timeout time.Duration) (*Build, error) {
 	ql, err := c.TriggerBuild(jobPath, params)
 	if err != nil {
@@ -311,13 +289,11 @@ func (c *Client) TriggerBuildAndWait(jobPath string, params map[string]string, t
 		return nil, fmt.Errorf("no queue location returned")
 	}
 
-	// Wait for the build to start
 	build, err := c.WaitForQueuedBuild(ql.QueueURL, timeout)
 	if err != nil {
 		return nil, err
 	}
 
-	// Wait for the build to complete
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		b, err := c.GetBuild(jobPath, build.Number)
@@ -335,10 +311,7 @@ func (c *Client) TriggerBuildAndWait(jobPath string, params map[string]string, t
 	return nil, fmt.Errorf("build timed out after %s", timeout)
 }
 
-// WaitForQueuedBuild waits for a queued build to get an executor and start.
 func (c *Client) WaitForQueuedBuild(queueURL string, timeout time.Duration) (*BuildRef, error) {
-	// Extract the queue item path from the URL
-	// queueURL is like http://jenkins/queue/item/123/
 	deadline := time.Now().Add(timeout)
 
 	for time.Now().Before(deadline) {
@@ -371,7 +344,6 @@ func (c *Client) WaitForQueuedBuild(queueURL string, timeout time.Duration) (*Bu
 	return nil, fmt.Errorf("timed out waiting for build to start")
 }
 
-// extractQueuePath extracts the path portion from a queue URL.
 func extractQueuePath(queueURL string) string {
 	u, err := url.Parse(queueURL)
 	if err != nil {

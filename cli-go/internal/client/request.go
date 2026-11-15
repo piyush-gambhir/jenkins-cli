@@ -9,7 +9,6 @@ import (
 	"strings"
 )
 
-// requestOptions configures an HTTP request.
 type requestOptions struct {
 	ctx         context.Context
 	method      string
@@ -20,7 +19,6 @@ type requestOptions struct {
 	headers     map[string]string
 }
 
-// buildURL constructs a full URL from the base URL, path, and query parameters.
 func (c *Client) buildURL(path string, query url.Values) string {
 	u := c.baseURL + path
 	if len(query) > 0 {
@@ -29,7 +27,6 @@ func (c *Client) buildURL(path string, query url.Values) string {
 	return u
 }
 
-// newRequest creates an http.Request with auth and headers set.
 func (c *Client) newRequest(opts requestOptions) (*http.Request, error) {
 	fullURL := c.buildURL(opts.path, opts.query)
 
@@ -58,8 +55,6 @@ func (c *Client) newRequest(opts requestOptions) (*http.Request, error) {
 	return req, nil
 }
 
-// doRequest executes an HTTP request and returns the response.
-// For POST requests, it automatically injects the CSRF crumb.
 func (c *Client) doRequest(opts requestOptions) (*http.Response, error) {
 	if strings.ToUpper(opts.method) == "POST" {
 		crumb, err := c.ensureCrumb()
@@ -87,7 +82,6 @@ func (c *Client) doRequest(opts requestOptions) (*http.Response, error) {
 	return resp, nil
 }
 
-// checkResponse reads the response body and returns an APIError if status >= 400.
 func checkResponse(resp *http.Response) error {
 	if resp.StatusCode < 400 {
 		return nil
