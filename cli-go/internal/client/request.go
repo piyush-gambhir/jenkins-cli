@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,8 @@ type requestOptions struct {
 	contentType string
 	query       url.Values
 	headers     map[string]string
+	noRedirect  bool
+	stopAt303   bool
 }
 
 func (c *Client) buildURL(path string, query url.Values) string {
@@ -74,7 +77,30 @@ func (c *Client) doRequest(opts requestOptions) (*http.Response, error) {
 		return nil, err
 	}
 
-	resp, err := c.httpClient.Do(req)
+	httpClient := c.httpClient
+	if opts.noRedirect {
+		noRedirectClient := *c.httpClient
+		noRedirectClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+		httpClient = &noRedirectClient
+	} else if opts.stopAt303 {
+		stopClient := *c.httpClient
+		next := c.httpClient.CheckRedirect
+		stopClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if req.Response != nil && req.Response.StatusCode == http.StatusSeeOther {
+				return http.ErrUseLastResponse
+			}
+			if next != nil {
+				return next(req, via)
+			}
+			if len(via) >= 10 {
+				return errors.New("stopped after 10 redirects")
+			}
+			return nil
+		}
+		httpClient = &stopClient
+	}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("executing request: %w", err)
 	}

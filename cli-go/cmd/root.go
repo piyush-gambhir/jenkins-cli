@@ -46,7 +46,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "jenkins",
-	Short: "Jenkins CLI — manage Jenkins from the command line",
+	Short: "Jenkins CLI: manage Jenkins from the command line",
 	Long: `A comprehensive command-line interface for interacting with Jenkins CI/CD servers.
 
 Manage jobs, builds, nodes, plugins, credentials, pipelines, views, and

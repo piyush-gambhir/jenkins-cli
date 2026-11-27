@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 
 	jpath "github.com/piyush-gambhir/jenkins-cli/cli-go/internal/path"
 )
@@ -62,16 +63,22 @@ func (c *Client) ListPipelineInputs(jobPath string, buildNumber int) ([]Pipeline
 func (c *Client) SubmitPipelineInput(jobPath string, buildNumber int, inputID string, params map[string]string) error {
 	path := jpath.ToJenkinsPath(jobPath) + fmt.Sprintf("/%d/input/%s/proceed", buildNumber, url.PathEscape(inputID))
 
-	formData := url.Values{}
-	if len(params) > 0 {
-		jsonBytes, err := json.Marshal(params)
-		if err != nil {
-			return fmt.Errorf("marshaling input params: %w", err)
-		}
-		formData.Set("json", string(jsonBytes))
+	names := make([]string, 0, len(params))
+	for name := range params {
+		names = append(names, name)
 	}
+	sort.Strings(names)
+	submitted := make([]map[string]string, 0, len(names))
+	for _, name := range names {
+		submitted = append(submitted, map[string]string{"name": name, "value": params[name]})
+	}
+	jsonBytes, err := json.Marshal(map[string]interface{}{"parameter": submitted})
+	if err != nil {
+		return fmt.Errorf("marshaling input params: %w", err)
+	}
+	formData := url.Values{"json": {string(jsonBytes)}}
 
-	_, err := c.PostForm(path, nil, formData)
+	_, err = c.PostForm(path, nil, formData)
 	if err != nil {
 		return fmt.Errorf("submitting pipeline input: %w", err)
 	}

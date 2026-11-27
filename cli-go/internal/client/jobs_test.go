@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
 )
@@ -183,9 +184,11 @@ func TestTriggerBuild(t *testing.T) {
 func TestTriggerParameterizedBuild(t *testing.T) {
 	var gotPath string
 	var gotBranch string
+	var gotQuery string
 	ts, c := newJobTestServer(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		gotBranch = r.URL.Query().Get("BRANCH")
+		gotQuery = r.URL.RawQuery
+		gotBranch = r.PostFormValue("BRANCH")
 		w.Header().Set("Location", "http://jenkins/queue/item/99/")
 		w.WriteHeader(http.StatusCreated)
 	})
@@ -201,7 +204,10 @@ func TestTriggerParameterizedBuild(t *testing.T) {
 		t.Errorf("expected path /job/my-job/buildWithParameters, got %q", gotPath)
 	}
 	if gotBranch != "main" {
-		t.Errorf("expected BRANCH=main, got %q", gotBranch)
+		t.Errorf("expected BRANCH=main in the form body, got %q", gotBranch)
+	}
+	if gotQuery != "" {
+		t.Errorf("expected no build parameters in the URL, got query %q", gotQuery)
 	}
 	if !strings.Contains(ql.QueueURL, "queue/item/99") {
 		t.Errorf("expected queue URL containing 'queue/item/99', got %q", ql.QueueURL)
@@ -260,5 +266,32 @@ func TestDisableJob(t *testing.T) {
 	}
 	if gotPath != "/job/my-job/disable" {
 		t.Errorf("expected path /job/my-job/disable, got %q", gotPath)
+	}
+}
+
+func TestWaitForQueuedBuild_ContextPath(t *testing.T) {
+	var gotPath string
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		if r.URL.Path != "/jenkins/queue/item/42/api/json" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"id": 42, "executable": {"number": 7, "url": "http://jenkins/job/app/7/"}}`))
+	})
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	c := NewClient(config.Profile{URL: ts.URL + "/jenkins", Username: "admin", Token: "tok"})
+	c.httpClient = ts.Client()
+
+	ref, err := c.WaitForQueuedBuild(ts.URL+"/jenkins/queue/item/42/", 5*time.Second)
+	if err != nil {
+		t.Fatalf("unexpected error: %v (last path %q)", err, gotPath)
+	}
+	if ref.Number != 7 {
+		t.Errorf("expected build number 7, got %d", ref.Number)
 	}
 }

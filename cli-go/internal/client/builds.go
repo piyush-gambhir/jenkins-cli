@@ -56,7 +56,8 @@ type Author struct {
 }
 
 type BuildListResponse struct {
-	Builds []Build `json:"builds"`
+	Builds    []Build `json:"builds"`
+	AllBuilds []Build `json:"allBuilds"`
 }
 
 type TestReport struct {
@@ -111,7 +112,11 @@ type PipelineRun struct {
 func (c *Client) ListBuilds(jobPath string, limit int) ([]Build, error) {
 	path := jpath.ToJenkinsPath(jobPath)
 
-	tree := fmt.Sprintf("builds[number,url,result,building,timestamp,duration,displayName]{0,%d}", limit)
+	field := "builds"
+	if limit > 100 {
+		field = "allBuilds"
+	}
+	tree := fmt.Sprintf("%s[number,url,result,building,timestamp,duration,displayName]{0,%d}", field, limit)
 	query := TreeParam(tree)
 
 	data, err := c.Get(path, query)
@@ -124,6 +129,9 @@ func (c *Client) ListBuilds(jobPath string, limit int) ([]Build, error) {
 		return nil, fmt.Errorf("parsing builds: %w", err)
 	}
 
+	if field == "allBuilds" {
+		return resp.AllBuilds, nil
+	}
 	return resp.Builds, nil
 }
 
@@ -373,6 +381,8 @@ func FormatTimestamp(ms int64) string {
 
 func ColorToStatus(color string) string {
 	switch {
+	case strings.HasSuffix(color, "_anime"):
+		return "RUNNING"
 	case strings.HasPrefix(color, "blue"):
 		return "SUCCESS"
 	case strings.HasPrefix(color, "red"):
@@ -384,11 +394,8 @@ func ColorToStatus(color string) string {
 	case strings.HasPrefix(color, "aborted"):
 		return "ABORTED"
 	case strings.HasPrefix(color, "notbuilt"):
-		return "NOT BUILT"
+		return "NOT_BUILT"
 	default:
-		if strings.HasSuffix(color, "_anime") {
-			return "RUNNING"
-		}
 		return strings.ToUpper(color)
 	}
 }

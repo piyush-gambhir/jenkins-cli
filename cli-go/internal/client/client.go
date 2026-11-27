@@ -253,33 +253,6 @@ func (c *Client) PostForm(path string, query url.Values, formData url.Values) ([
 	return readAllLimited(resp.Body)
 }
 
-func (c *Client) PostRaw(path string, query url.Values) (*http.Response, error) {
-	resp, err := c.doRequest(requestOptions{
-		method: "POST",
-		path:   path,
-		query:  query,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode >= 400 {
-		defer resp.Body.Close()
-		body, err := readAllLimited(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("reading error response body: %w", err)
-		}
-		return nil, &APIError{
-			StatusCode: resp.StatusCode,
-			Status:     resp.Status,
-			Message:    parseErrorBody(string(body)),
-			URL:        resp.Request.URL.String(),
-		}
-	}
-
-	return resp, nil
-}
-
 func (c *Client) BaseURL() string {
 	return c.baseURL
 }

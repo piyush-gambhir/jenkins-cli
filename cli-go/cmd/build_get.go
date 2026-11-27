@@ -20,7 +20,7 @@ func newBuildGetCmd() *cobra.Command {
 Shows build number, display name, URL, result, building status, timestamp,
 duration, description, artifacts, and change set information.
 
-Aliases: ` + "`info`" + `, ` + "`show`" + `, ` + "`describe`" + ` — same behavior.
+Aliases: ` + "`info`" + `, ` + "`show`" + `, ` + "`describe`" + ` (same behavior).
 
 Examples:
   # Get details about build #42

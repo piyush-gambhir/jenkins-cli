@@ -182,10 +182,10 @@ jenkins credential get <credential-id> -o json
 jenkins credential get <credential-id> --store system --domain _ -o json
 
 # Create a credential from XML config
-jenkins credential create --store system --domain _ -f credential.xml
+jenkins credential create --store system --domain _ --from-file credential.xml
 
 # Update a credential
-jenkins credential update <credential-id> --store system --domain _ -f credential.xml
+jenkins credential update <credential-id> --store system --domain _ --from-file credential.xml
 
 # Delete a credential
 jenkins credential delete <credential-id> --store system --domain _
@@ -205,7 +205,7 @@ jenkins node list --online -o json
 jenkins node get my-agent -o json
 
 # Create a new permanent agent node
-jenkins node create -f node.xml
+jenkins node create my-agent --remote-fs /home/jenkins --executors 2
 
 # Take a node offline with a reason
 jenkins node disable my-agent --message "Maintenance window"
@@ -282,10 +282,10 @@ jenkins user get <user-id> -o json
 jenkins system info -o json
 
 # Restart Jenkins (graceful -- waits for running builds)
-jenkins system restart --safe
+jenkins system restart --safe --confirm
 
 # Restart Jenkins immediately
-jenkins system restart
+jenkins system restart --confirm
 
 # Enter quiet-down mode (no new builds start)
 jenkins system quiet-down
@@ -304,13 +304,13 @@ jenkins system run-script --from-file maintenance-script.groovy
 
 ```bash
 # Create a new job from XML config
-jenkins job create my-folder/new-pipeline -f config.xml
+jenkins job create new-pipeline --folder my-folder --from-file config.xml
 
 # Copy an existing job
-jenkins job copy my-folder/source-pipeline my-folder/target-pipeline
+jenkins job copy source-pipeline target-pipeline --folder my-folder
 
 # Rename a job
-jenkins job rename my-folder/old-name my-folder/new-name
+jenkins job rename my-folder/old-name new-name
 
 # Disable a job
 jenkins job disable my-folder/deploy-pipeline
@@ -319,7 +319,7 @@ jenkins job disable my-folder/deploy-pipeline
 jenkins job enable my-folder/deploy-pipeline
 
 # Update a job's XML config
-jenkins job update my-folder/deploy-pipeline -f config.xml
+jenkins job update my-folder/deploy-pipeline --from-file config.xml
 
 # Wipe the workspace directory
 jenkins job wipe-workspace my-folder/deploy-pipeline
@@ -349,7 +349,7 @@ jenkins job delete my-folder/deploy-pipeline
 
 ```bash
 # Trigger and wait
-jenkins job build team/deploy-pipeline --param BRANCH=main --wait -o json
+jenkins job build team/deploy-pipeline --param BRANCH=main --wait
 
 # If you need to check the latest build result separately
 jenkins build list team/deploy-pipeline --limit 1 -o json
@@ -390,8 +390,8 @@ jenkins pipeline input-submit team/deploy-pipeline 42 deploy-approval --param AP
 |---------|-------------|
 | `jenkins job list` | List jobs (--folder, --recursive, --status) |
 | `jenkins job get <path>` | Get detailed info about a job |
-| `jenkins job create <path> -f <xml>` | Create a new job from XML config |
-| `jenkins job update <path> -f <xml>` | Update a job's XML config |
+| `jenkins job create <name> --from-file <xml>` | Create a new job from XML config |
+| `jenkins job update <path> --from-file <xml>` | Update a job's XML config |
 | `jenkins job copy <source> <target>` | Copy an existing job |
 | `jenkins job rename <old> <new>` | Rename a job |
 | `jenkins job delete <path>` | Permanently delete a job |
@@ -439,8 +439,8 @@ jenkins pipeline input-submit team/deploy-pipeline 42 deploy-approval --param AP
 |---------|-------------|
 | `jenkins credential list` | List credentials (--store, --domain, --type) |
 | `jenkins credential get <id>` | Get credential details (--store, --domain) |
-| `jenkins credential create -f <xml>` | Create a credential (--store, --domain) |
-| `jenkins credential update <id> -f <xml>` | Update a credential (--store, --domain) |
+| `jenkins credential create --from-file <xml>` | Create a credential (--store, --domain) |
+| `jenkins credential update <id> --from-file <xml>` | Update a credential (--store, --domain) |
 | `jenkins credential delete <id>` | Delete a credential (--store, --domain) |
 
 ### `jenkins node` (aliases: `nodes`, `agent`, `agents`) -- Manage nodes/agents
@@ -449,7 +449,7 @@ jenkins pipeline input-submit team/deploy-pipeline 42 deploy-approval --param AP
 |---------|-------------|
 | `jenkins node list` | List all nodes (--offline, --online) |
 | `jenkins node get <name>` | Get node details |
-| `jenkins node create -f <xml>` | Create a permanent agent node |
+| `jenkins node create <name> --remote-fs <dir>` | Create a permanent agent node |
 | `jenkins node delete <name>` | Delete a node |
 | `jenkins node enable <name>` | Bring a node online |
 | `jenkins node disable <name>` | Take a node offline (--message) |

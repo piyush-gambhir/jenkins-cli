@@ -20,8 +20,9 @@ func newViewCreateCmd() *cobra.Command {
 		Annotations: map[string]string{"mutates": "true"},
 		Long: `Create a new Jenkins view.
 
-Creates an empty view. Use --type to specify the view type class name.
-After creation, use "jenkins view add-job" to add jobs to the view.
+Creates an empty list view. --type only accepts hudson.model.ListView
+(the default); other view types are rejected. After creation, use
+"jenkins view add-job" to add jobs to the view.
 
 Examples:
   # Create a list view (default type)
@@ -35,7 +36,7 @@ Examples:
 
 			if err := jenkinsClient.CreateView(name, viewType); err != nil {
 				var apiErr *client.APIError
-				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) {
+				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) && viewExists(name) {
 					if !quietFlag {
 						fmt.Fprintf(os.Stdout, "View %q already exists, skipping.\n", name)
 					}
@@ -51,8 +52,13 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVar(&viewType, "type", "hudson.model.ListView", "View type class name")
+	cmd.Flags().StringVar(&viewType, "type", "hudson.model.ListView", "View type class name (only hudson.model.ListView is supported)")
 	cmd.Flags().BoolVar(&ifNotExists, "if-not-exists", false, "Don't error if the view already exists")
 
 	return cmd
+}
+
+func viewExists(name string) bool {
+	_, err := jenkinsClient.GetView(name)
+	return err == nil
 }

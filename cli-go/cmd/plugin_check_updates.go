@@ -32,7 +32,7 @@ Examples:
 				return fmt.Errorf("checking updates: %w", err)
 			}
 
-			if len(updates) == 0 {
+			if len(updates) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "All plugins are up to date.")
 				return nil
 			}
@@ -49,7 +49,9 @@ Examples:
 				},
 			}
 
-			fmt.Fprintf(os.Stdout, "%d plugin(s) have updates available:\n", len(updates))
+			if outFormat == output.FormatTable {
+				fmt.Fprintf(os.Stdout, "%d plugin(s) have updates available:\n", len(updates))
+			}
 			return output.Print(os.Stdout, outFormat, updates, tableDef)
 		},
 	}

@@ -71,27 +71,30 @@ func (c *Client) GetNode(name string) (*Node, error) {
 }
 
 func (c *Client) CreateNode(name string, numExecutors int, remoteFSRoot, labels string) error {
-	nodeJSON := fmt.Sprintf(`{
-		"name": "%s",
-		"nodeDescription": "",
-		"numExecutors": %d,
-		"remoteFS": "%s",
-		"labelString": "%s",
-		"mode": "NORMAL",
-		"": ["hudson.slaves.JNLPLauncher", "hudson.slaves.RetentionStrategy$Always"],
-		"launcher": {"stapler-class": "hudson.slaves.JNLPLauncher", "$class": "hudson.slaves.JNLPLauncher"},
-		"retentionStrategy": {"stapler-class": "hudson.slaves.RetentionStrategy$Always", "$class": "hudson.slaves.RetentionStrategy$Always"},
-		"nodeProperties": {"stapler-class-bag": "true"},
-		"type": "hudson.slaves.DumbSlave"
-	}`, name, numExecutors, remoteFSRoot, labels)
+	nodeJSON, err := json.Marshal(map[string]interface{}{
+		"name":              name,
+		"nodeDescription":   "",
+		"numExecutors":      numExecutors,
+		"remoteFS":          remoteFSRoot,
+		"labelString":       labels,
+		"mode":              "NORMAL",
+		"":                  []string{"hudson.slaves.JNLPLauncher", "hudson.slaves.RetentionStrategy$Always"},
+		"launcher":          map[string]string{"stapler-class": "hudson.slaves.JNLPLauncher", "$class": "hudson.slaves.JNLPLauncher"},
+		"retentionStrategy": map[string]string{"stapler-class": "hudson.slaves.RetentionStrategy$Always", "$class": "hudson.slaves.RetentionStrategy$Always"},
+		"nodeProperties":    map[string]string{"stapler-class-bag": "true"},
+		"type":              "hudson.slaves.DumbSlave",
+	})
+	if err != nil {
+		return fmt.Errorf("marshaling node config: %w", err)
+	}
 
 	query := url.Values{
 		"name": {name},
 		"type": {"hudson.slaves.DumbSlave"},
-		"json": {nodeJSON},
+		"json": {string(nodeJSON)},
 	}
 
-	_, err := c.PostForm("/computer/doCreateItem", query, nil)
+	_, err = c.PostForm("/computer/doCreateItem", query, nil)
 	if err != nil {
 		return fmt.Errorf("creating node: %w", err)
 	}
@@ -111,11 +114,19 @@ func (c *Client) DeleteNode(name string) error {
 }
 
 func (c *Client) ToggleOffline(name string, offline bool, message string) error {
-	var path string
+	if !offline {
+		node, err := c.GetNode(name)
+		if err != nil {
+			return err
+		}
+		if !node.TemporarilyOffline {
+			return nil
+		}
+	}
+
+	path := fmt.Sprintf("/computer/%s/toggleOffline", url.PathEscape(name))
 	if offline {
-		path = fmt.Sprintf("/computer/%s/toggleOffline", url.PathEscape(name))
-	} else {
-		path = fmt.Sprintf("/computer/%s/toggleOffline", url.PathEscape(name))
+		path = fmt.Sprintf("/computer/%s/changeOfflineCause", url.PathEscape(name))
 	}
 
 	query := url.Values{}

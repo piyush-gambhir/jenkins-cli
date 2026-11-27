@@ -39,7 +39,7 @@ Examples:
 
 			if err := jenkinsClient.InstallPlugin(name, version); err != nil {
 				var apiErr *client.APIError
-				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) {
+				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) && pluginInstalled(name) {
 					if !quietFlag {
 						fmt.Fprintf(os.Stdout, "Plugin %q is already installed, skipping.\n", name)
 					}
@@ -59,4 +59,9 @@ Examples:
 	cmd.Flags().BoolVar(&ifNotExists, "if-not-exists", false, "Don't error if the plugin is already installed")
 
 	return cmd
+}
+
+func pluginInstalled(name string) bool {
+	_, err := jenkinsClient.GetPlugin(name)
+	return err == nil
 }

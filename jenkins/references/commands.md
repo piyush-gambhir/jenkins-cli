@@ -563,7 +563,7 @@ jenkins view create "Dashboard" --type hudson.model.ListView
 
 | Flag | Description |
 |---|---|
-| `--type <class>` | View type class name (default: hudson.model.ListView) |
+| `--type <class>` | View type class name (only hudson.model.ListView, the default, is supported) |
 
 ### `jenkins view delete <name>`
 

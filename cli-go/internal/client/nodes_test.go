@@ -87,7 +87,7 @@ func TestGetNode(t *testing.T) {
 	}
 }
 
-func TestToggleOffline(t *testing.T) {
+func TestToggleOffline_DisableSetsOfflineCause(t *testing.T) {
 	var gotPath, gotMethod, gotMessage string
 	ts, c := newNodeTestServer(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
@@ -101,14 +101,73 @@ func TestToggleOffline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gotPath != "/computer/agent-1/toggleOffline" {
-		t.Errorf("expected path /computer/agent-1/toggleOffline, got %q", gotPath)
+	if gotPath != "/computer/agent-1/changeOfflineCause" {
+		t.Errorf("expected path /computer/agent-1/changeOfflineCause, got %q", gotPath)
 	}
 	if gotMethod != "POST" {
 		t.Errorf("expected POST, got %s", gotMethod)
 	}
 	if gotMessage != "Maintenance window" {
 		t.Errorf("expected offlineMessage 'Maintenance window', got %q", gotMessage)
+	}
+}
+
+func TestToggleOffline_EnableOnlyTogglesTemporarilyOfflineNode(t *testing.T) {
+	for _, tc := range []struct {
+		temporarilyOffline bool
+		wantToggle         bool
+	}{
+		{temporarilyOffline: false, wantToggle: false},
+		{temporarilyOffline: true, wantToggle: true},
+	} {
+		var toggled bool
+		ts, c := newNodeTestServer(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == "GET" && r.URL.Path == "/computer/agent-1/api/json":
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(Node{DisplayName: "agent-1", TemporarilyOffline: tc.temporarilyOffline, Offline: tc.temporarilyOffline})
+			case r.Method == "POST" && r.URL.Path == "/computer/agent-1/toggleOffline":
+				toggled = true
+				w.WriteHeader(http.StatusOK)
+			default:
+				t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+				w.WriteHeader(http.StatusNotFound)
+			}
+		})
+
+		if err := c.ToggleOffline("agent-1", false, ""); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		ts.Close()
+		if toggled != tc.wantToggle {
+			t.Errorf("temporarilyOffline=%v: toggled=%v, want %v", tc.temporarilyOffline, toggled, tc.wantToggle)
+		}
+	}
+}
+
+func TestCreateNode_EscapesJSONValues(t *testing.T) {
+	var got map[string]interface{}
+	ts, c := newNodeTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.Unmarshal([]byte(r.URL.Query().Get("json")), &got); err != nil {
+			t.Errorf("node config is not valid JSON: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	defer ts.Close()
+
+	if err := c.CreateNode("win1", 2, `C:\jenkins`, `windows "x64"`); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got["remoteFS"] != `C:\jenkins` {
+		t.Errorf("expected remoteFS C:\\jenkins, got %v", got["remoteFS"])
+	}
+	if got["labelString"] != `windows "x64"` {
+		t.Errorf("expected labelString with quotes preserved, got %v", got["labelString"])
+	}
+	if got["numExecutors"] != float64(2) {
+		t.Errorf("expected numExecutors 2, got %v", got["numExecutors"])
 	}
 }
 

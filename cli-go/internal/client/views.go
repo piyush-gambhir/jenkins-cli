@@ -51,8 +51,8 @@ func (c *Client) GetView(name string) (*View, error) {
 }
 
 func (c *Client) CreateView(name, viewType string) error {
-	if viewType == "" {
-		viewType = "hudson.model.ListView"
+	if viewType != "" && viewType != "hudson.model.ListView" {
+		return fmt.Errorf("unsupported view type %q: only hudson.model.ListView is supported", viewType)
 	}
 
 	configXML := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>

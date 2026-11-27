@@ -51,7 +51,7 @@ jenkins whoami -o json     # Authenticated user info
 
 - **The killer combo:** `jenkins job build <path> --follow` triggers a build AND streams console output in real time. This is the single most useful command for CI/CD automation.
 
-- **For CI/CD automation:** `jenkins job build <path> --wait --timeout 30m` blocks until the build finishes and returns exit code 0 for SUCCESS, non-zero for FAILURE. Combine with `--follow` to also stream logs.
+- **For CI/CD automation:** `jenkins job build <path> --wait --timeout 30m` blocks until the build finishes and prints `Build #N completed: RESULT`. The exit code is 0 whenever the build ran, even if it failed, so check `RESULT` (or `jenkins build get <path> <n> -o json`). Combine with `--follow` to also print the console log.
 
 - **`--param KEY=VALUE` is repeatable** for parameterized builds. Pass as many as needed.
 
@@ -81,7 +81,8 @@ jenkins job build my-pipeline --follow
 
 ```bash
 jenkins job build deploy/production --param BRANCH=main --param ENV=prod --wait --timeout 30m
-echo "Exit code: $?"  # 0=SUCCESS, non-zero=FAILURE
+# Exit code is 0 once the build finishes, whatever its result; read the result explicitly
+jenkins build list deploy/production --limit 1 -o json | jq -r '.[0].result'
 ```
 
 ### Full workflow: params + wait + stream logs
