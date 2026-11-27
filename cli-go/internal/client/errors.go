@@ -15,7 +15,7 @@ type APIError struct {
 
 func (e *APIError) Error() string {
 	if e.Message != "" {
-		return fmt.Sprintf("jenkins API error: %s (status %d) — %s", e.Status, e.StatusCode, e.Message)
+		return fmt.Sprintf("jenkins API error: %s (status %d): %s", e.Status, e.StatusCode, e.Message)
 	}
 	return fmt.Sprintf("jenkins API error: %s (status %d) url=%s", e.Status, e.StatusCode, e.URL)
 }

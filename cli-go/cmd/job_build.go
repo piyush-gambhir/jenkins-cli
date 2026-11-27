@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -70,7 +71,7 @@ Examples:
 			defer cancel()
 			jenkinsClient.SetContext(ctx)
 
-			if wait || follow {
+			if wait {
 				if !quietFlag {
 					fmt.Fprintf(os.Stdout, "Triggering build for %q and waiting...\n", jobPath)
 				}
@@ -111,6 +112,9 @@ Examples:
 			}
 
 			if follow {
+				if ql.QueueURL == "" {
+					return fmt.Errorf("waiting for build: no queue location returned")
+				}
 				if !quietFlag {
 					fmt.Fprintf(os.Stdout, "Waiting for build to start...\n")
 				}
@@ -121,7 +125,13 @@ Examples:
 				if !quietFlag {
 					fmt.Fprintf(os.Stdout, "Build #%d started. Streaming console...\n", buildRef.Number)
 				}
-				return jenkinsClient.StreamBuildLog(jobPath, buildRef.Number, os.Stdout, ctx)
+				if err := jenkinsClient.StreamBuildLog(jobPath, buildRef.Number, os.Stdout, ctx); err != nil {
+					return err
+				}
+				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+					return fmt.Errorf("build #%d did not finish within %s", buildRef.Number, timeout)
+				}
+				return ctx.Err()
 			}
 
 			return nil

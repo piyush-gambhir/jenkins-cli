@@ -5,16 +5,17 @@ import (
 	"testing"
 )
 
-func TestCheckPluginUpdates_MapsUpdateCenterFields(t *testing.T) {
+func TestCheckPluginUpdates_FiltersInstalledPluginsWithUpdates(t *testing.T) {
 	ts, c := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/pluginManager/checkUpdatesServer":
 			w.WriteHeader(http.StatusOK)
-		case "/updateCenter/api/json":
+		case "/pluginManager/api/json":
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"updates": [
-				{"name": "git", "version": "5.7.0"},
-				{"name": "workflow-aggregator", "version": "608.v67378e9d3db_1"}
+			w.Write([]byte(`{"plugins": [
+				{"shortName": "git", "version": "5.6.0", "hasUpdate": true},
+				{"shortName": "credentials", "version": "1400.v1", "hasUpdate": false},
+				{"shortName": "workflow-aggregator", "version": "600.v1", "hasUpdate": true}
 			]}`))
 		default:
 			t.Errorf("unexpected path %q", r.URL.Path)
@@ -30,16 +31,10 @@ func TestCheckPluginUpdates_MapsUpdateCenterFields(t *testing.T) {
 	if len(updates) != 2 {
 		t.Fatalf("expected 2 updates, got %d", len(updates))
 	}
-	if updates[0].ShortName != "git" {
-		t.Errorf("expected ShortName git, got %q", updates[0].ShortName)
-	}
-	if updates[0].Version != "5.7.0" {
-		t.Errorf("expected Version 5.7.0, got %q", updates[0].Version)
-	}
-	if !updates[0].HasUpdate {
-		t.Error("expected HasUpdate to be true for update center entries")
+	if updates[0].ShortName != "git" || updates[0].Version != "5.6.0" {
+		t.Errorf("expected git 5.6.0, got %s %s", updates[0].ShortName, updates[0].Version)
 	}
 	if updates[1].ShortName != "workflow-aggregator" {
-		t.Errorf("expected ShortName workflow-aggregator, got %q", updates[1].ShortName)
+		t.Errorf("expected workflow-aggregator, got %q", updates[1].ShortName)
 	}
 }

@@ -54,19 +54,26 @@ func (c *Client) GetServerVersion() (string, error) {
 }
 
 func (c *Client) Restart() error {
-	_, err := c.Post("/restart", nil)
-	if err != nil {
+	if err := c.postWithoutRedirect("/restart"); err != nil {
 		return fmt.Errorf("restarting Jenkins: %w", err)
 	}
 	return nil
 }
 
 func (c *Client) SafeRestart() error {
-	_, err := c.Post("/safeRestart", nil)
-	if err != nil {
+	if err := c.postWithoutRedirect("/safeRestart"); err != nil {
 		return fmt.Errorf("safe restarting Jenkins: %w", err)
 	}
 	return nil
+}
+
+func (c *Client) postWithoutRedirect(path string) error {
+	resp, err := c.doRequest(requestOptions{method: "POST", path: path, noRedirect: true})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return checkResponse(resp)
 }
 
 func (c *Client) QuietDown() error {

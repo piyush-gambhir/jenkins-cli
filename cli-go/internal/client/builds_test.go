@@ -341,3 +341,44 @@ func TestGetBuildTestReport(t *testing.T) {
 		t.Errorf("expected suite name 'com.example.Tests', got %q", report.Suites[0].Name)
 	}
 }
+
+func TestColorToStatus(t *testing.T) {
+	for color, want := range map[string]string{
+		"blue":           "SUCCESS",
+		"blue_anime":     "RUNNING",
+		"red_anime":      "RUNNING",
+		"notbuilt":       "NOT_BUILT",
+		"notbuilt_anime": "RUNNING",
+		"disabled":       "DISABLED",
+		"aborted":        "ABORTED",
+	} {
+		if got := ColorToStatus(color); got != want {
+			t.Errorf("ColorToStatus(%q) = %q, want %q", color, got, want)
+		}
+	}
+}
+
+func TestListBuilds_LimitOver100UsesAllBuilds(t *testing.T) {
+	var gotTree string
+	ts, c := newBuildTestServer(func(w http.ResponseWriter, r *http.Request) {
+		gotTree = r.URL.Query().Get("tree")
+		w.Header().Set("Content-Type", "application/json")
+		builds := make([]Build, 150)
+		for i := range builds {
+			builds[i] = Build{Number: 150 - i}
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"allBuilds": builds})
+	})
+	defer ts.Close()
+
+	builds, err := c.ListBuilds("my-job", 150)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.HasPrefix(gotTree, "allBuilds[") || !strings.HasSuffix(gotTree, "{0,150}") {
+		t.Errorf("expected allBuilds tree with range {0,150}, got %q", gotTree)
+	}
+	if len(builds) != 150 {
+		t.Errorf("expected 150 builds, got %d", len(builds))
+	}
+}

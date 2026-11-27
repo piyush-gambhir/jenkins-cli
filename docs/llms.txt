@@ -314,7 +314,7 @@ jenkins job build <job-path> [flags]
 - `-F, --follow`, stream the console output
 - `--timeout <dur>`, max wait for `--wait`/`--follow` (default `30m`; Go duration syntax, e.g. `1h`, `90s`)
 
-Behavior: with `--wait` (and/or `--follow`) the command waits for the build to finish and prints `Build #N completed: RESULT (duration: ...)`; if `--follow` is also set, it then prints the full console output. With only `--follow` (no `--wait`) it waits for the queued build to start and streams the log live. The command exits non-zero only if triggering/waiting fails, a completed build whose result is `FAILURE` does not by itself set a non-zero exit code, so inspect the printed `RESULT` (or fetch it via `build get -o json`) to branch on build outcome.
+Behavior: with `--wait` the command waits for the build to finish and prints `Build #N completed: RESULT (duration: ...)`; if `--follow` is also set, it then prints the full console output. With only `--follow` (no `--wait`) it waits for the queued build to start and streams the log live. The command exits non-zero only if triggering/waiting fails, a completed build whose result is `FAILURE` does not by itself set a non-zero exit code, so inspect the printed `RESULT` (or fetch it via `build get -o json`) to branch on build outcome.
 ```bash
 jenkins job build my-pipeline
 jenkins job build my-pipeline --param BRANCH=main --param ENV=staging
@@ -329,7 +329,7 @@ jenkins job create <job-name> [flags]
 (mutates) Create a job from an XML `config.xml`.
 - `--from-file <path>`, XML config (required; `-` reads stdin)
 - `-f, --folder <path>`, folder to create the job in
-- `--if-not-exists`, don't error if the job already exists (idempotent; treats HTTP 400/409 as "exists")
+- `--if-not-exists`, don't error if the job already exists (idempotent; on HTTP 400/409 it checks that the job exists before skipping, other failures still error)
 ```bash
 jenkins job create my-new-job --from-file config.xml
 cat config.xml | jenkins job create my-new-job --from-file -
@@ -567,7 +567,7 @@ jenkins node create <node-name> [flags]
 - `--remote-fs <path>`, remote filesystem root (required)
 - `--executors <n>`, executor count (default `1`)
 - `--labels "<a b c>"`, space-separated labels
-- `--if-not-exists`, idempotent create (treats HTTP 400/409 as "exists")
+- `--if-not-exists`, idempotent create (on HTTP 400/409 it checks that the node exists before skipping)
 ```bash
 jenkins node create my-agent --remote-fs /home/jenkins --executors 2
 jenkins node create build-agent --remote-fs /opt/jenkins --labels "linux docker"
@@ -586,7 +586,7 @@ jenkins node delete my-agent --confirm
 ```
 jenkins node enable <node-name>
 ```
-(mutates) Bring a temporarily-offline node back online.
+(mutates) Bring a temporarily-offline node back online. Does nothing if the node is not temporarily offline.
 ```bash
 jenkins node enable my-agent
 ```
@@ -594,7 +594,7 @@ jenkins node enable my-agent
 ```
 jenkins node disable <node-name> [flags]
 ```
-(mutates) Take a node temporarily offline.
+(mutates) Take a node temporarily offline (if it is already offline, only the reason is updated).
 - `-m, --message <text>`, offline reason
 ```bash
 jenkins node disable my-agent --message "Maintenance window"
@@ -633,8 +633,8 @@ jenkins view get "All" -o json
 jenkins view create <view-name> [flags]
 ```
 (mutates) Create an (empty) view.
-- `--type <class>`, view type class name (default `hudson.model.ListView`)
-- `--if-not-exists`, idempotent create (treats HTTP 400/409 as "exists")
+- `--type <class>`, view type class name (default `hudson.model.ListView`, the only supported type; other values are rejected)
+- `--if-not-exists`, idempotent create (on HTTP 400/409 it checks that the view exists before skipping)
 ```bash
 jenkins view create "My Team"
 jenkins view create "Dashboard" --type hudson.model.ListView --if-not-exists
@@ -696,7 +696,7 @@ jenkins plugin install <plugin-name> [flags]
 ```
 (mutates) Install a plugin from the update center (a Jenkins restart may be required to activate it).
 - `--version <ver>`, specific version
-- `--if-not-exists`, idempotent install (treats HTTP 400/409 as "already installed")
+- `--if-not-exists`, idempotent install (on HTTP 400/409 it checks that the plugin is installed before skipping)
 ```bash
 jenkins plugin install git
 jenkins plugin install git --version 5.2.0
@@ -822,7 +822,7 @@ jenkins user get admin -o json
 ```
 jenkins pipeline validate [flags]
 ```
-Validate a **declarative** Jenkinsfile via the pipeline model converter (scripted pipelines are not supported by this endpoint). Prints the validation result to stdout.
+Validate a **declarative** Jenkinsfile via the pipeline model converter (scripted pipelines are not supported by this endpoint). Prints the validation result to stdout and exits 1 unless Jenkins reports "Jenkinsfile successfully validated".
 - `-f, --from-file <path>`, Jenkinsfile (required; `-` reads stdin)
 ```bash
 jenkins pipeline validate --from-file Jenkinsfile

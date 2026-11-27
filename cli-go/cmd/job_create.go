@@ -60,7 +60,7 @@ Examples:
 
 			if err := jenkinsClient.CreateJob(folder, name, string(data)); err != nil {
 				var apiErr *client.APIError
-				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) {
+				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) && jobExists(folder+"/"+name) {
 					loc := name
 					if folder != "" {
 						loc = filepath.Join(folder, name)
@@ -89,4 +89,9 @@ Examples:
 	cmd.Flags().BoolVar(&ifNotExists, "if-not-exists", false, "Don't error if the job already exists")
 
 	return cmd
+}
+
+func jobExists(jobPath string) bool {
+	_, err := jenkinsClient.GetJob(jobPath)
+	return err == nil
 }

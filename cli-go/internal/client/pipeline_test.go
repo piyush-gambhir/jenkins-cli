@@ -87,3 +87,31 @@ func TestListPipelineInputs_NoParams(t *testing.T) {
 		t.Fatalf("unexpected inputs: %+v", inputs)
 	}
 }
+
+func TestSubmitPipelineInput_SendsParameterArray(t *testing.T) {
+	for _, tc := range []struct {
+		params map[string]string
+		want   string
+	}{
+		{params: map[string]string{"ENV": "prod", "APPROVE": "yes"}, want: `{"parameter":[{"name":"APPROVE","value":"yes"},{"name":"ENV","value":"prod"}]}`},
+		{params: nil, want: `{"parameter":[]}`},
+	} {
+		var gotPath, gotJSON string
+		ts, c := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+			gotPath = r.URL.Path
+			gotJSON = r.PostFormValue("json")
+			w.WriteHeader(http.StatusOK)
+		})
+
+		if err := c.SubmitPipelineInput("deploy", 42, "deploy-approval", tc.params); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		ts.Close()
+		if gotPath != "/job/deploy/42/input/deploy-approval/proceed" {
+			t.Errorf("unexpected path %q", gotPath)
+		}
+		if gotJSON != tc.want {
+			t.Errorf("json form field = %s, want %s", gotJSON, tc.want)
+		}
+	}
+}

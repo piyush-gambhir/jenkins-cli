@@ -33,7 +33,7 @@ Examples:
 				return fmt.Errorf("listing queue: %w", err)
 			}
 
-			if len(items) == 0 {
+			if len(items) == 0 && outFormat == output.FormatTable {
 				fmt.Fprintln(os.Stdout, "Build queue is empty.")
 				return nil
 			}

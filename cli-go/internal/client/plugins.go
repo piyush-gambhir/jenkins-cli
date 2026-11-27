@@ -35,15 +35,6 @@ type PluginInstallStatus struct {
 	Version string `json:"version"`
 }
 
-type UpdateCenter struct {
-	AvailableUpdates []UpdateCenterPlugin `json:"updates"`
-}
-
-type UpdateCenterPlugin struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
 func (c *Client) ListPlugins() ([]Plugin, error) {
 	data, err := c.Get("/pluginManager", DepthParam(1))
 	if err != nil {
@@ -103,33 +94,16 @@ func (c *Client) UninstallPlugin(name string) error {
 func (c *Client) CheckPluginUpdates() ([]Plugin, error) {
 	_, _ = c.Post("/pluginManager/checkUpdatesServer", nil)
 
-	data, err := c.Get("/updateCenter", TreeParam("updates[name,version]"))
+	plugins, err := c.ListPlugins()
 	if err != nil {
-		plugins, err := c.ListPlugins()
-		if err != nil {
-			return nil, err
-		}
-		var updates []Plugin
-		for _, p := range plugins {
-			if p.HasUpdate {
-				updates = append(updates, p)
-			}
-		}
-		return updates, nil
+		return nil, err
 	}
 
-	var uc UpdateCenter
-	if err := json.Unmarshal(data, &uc); err != nil {
-		return nil, fmt.Errorf("parsing update center: %w", err)
-	}
-
-	updates := make([]Plugin, 0, len(uc.AvailableUpdates))
-	for _, u := range uc.AvailableUpdates {
-		updates = append(updates, Plugin{
-			ShortName: u.Name,
-			Version:   u.Version,
-			HasUpdate: true,
-		})
+	updates := []Plugin{}
+	for _, p := range plugins {
+		if p.HasUpdate {
+			updates = append(updates, p)
+		}
 	}
 	return updates, nil
 }

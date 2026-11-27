@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	jpath "github.com/piyush-gambhir/jenkins-cli/cli-go/internal/path"
@@ -252,24 +253,25 @@ type QueueLocation struct {
 func (c *Client) TriggerBuild(jobPath string, params map[string]string) (*QueueLocation, error) {
 	jp := jpath.ToJenkinsPath(jobPath)
 
-	var path string
-	var query url.Values
-
+	opts := requestOptions{method: "POST", path: jp + "/build", stopAt303: true}
 	if len(params) > 0 {
-		path = jp + "/buildWithParameters"
-		query = url.Values{}
+		form := url.Values{}
 		for k, v := range params {
-			query.Set(k, v)
+			form.Set(k, v)
 		}
-	} else {
-		path = jp + "/build"
+		opts.path = jp + "/buildWithParameters"
+		opts.body = strings.NewReader(form.Encode())
+		opts.contentType = "application/x-www-form-urlencoded"
 	}
 
-	resp, err := c.PostRaw(path, query)
+	resp, err := c.doRequest(opts)
 	if err != nil {
 		return nil, fmt.Errorf("triggering build: %w", err)
 	}
 	defer resp.Body.Close()
+	if err := checkResponse(resp); err != nil {
+		return nil, fmt.Errorf("triggering build: %w", err)
+	}
 
 	loc := resp.Header.Get("Location")
 	if loc == "" {
@@ -315,7 +317,7 @@ func (c *Client) WaitForQueuedBuild(queueURL string, timeout time.Duration) (*Bu
 	deadline := time.Now().Add(timeout)
 
 	for time.Now().Before(deadline) {
-		data, err := c.GetRaw(extractQueuePath(queueURL)+"/api/json", nil)
+		data, err := c.GetRaw(c.queueItemPath(queueURL)+"/api/json", nil)
 		if err != nil {
 			return nil, fmt.Errorf("checking queue: %w", err)
 		}
@@ -344,10 +346,13 @@ func (c *Client) WaitForQueuedBuild(queueURL string, timeout time.Duration) (*Bu
 	return nil, fmt.Errorf("timed out waiting for build to start")
 }
 
-func extractQueuePath(queueURL string) string {
-	u, err := url.Parse(queueURL)
-	if err != nil {
-		return queueURL
+func (c *Client) queueItemPath(queueURL string) string {
+	p := queueURL
+	if u, err := url.Parse(queueURL); err == nil {
+		p = u.Path
 	}
-	return u.Path
+	if base, err := url.Parse(c.baseURL); err == nil && base.Path != "" && strings.HasPrefix(p, base.Path+"/") {
+		p = strings.TrimPrefix(p, base.Path)
+	}
+	return strings.TrimRight(p, "/")
 }

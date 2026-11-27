@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -52,6 +53,9 @@ Examples:
 			}
 
 			fmt.Fprint(os.Stdout, result)
+			if !strings.HasPrefix(result, "Jenkinsfile successfully validated") {
+				return fmt.Errorf("invalid Jenkinsfile")
+			}
 			return nil
 		},
 	}

@@ -45,7 +45,7 @@ Examples:
 
 			if err := jenkinsClient.CreateNode(name, numExecutors, remoteFS, labels); err != nil {
 				var apiErr *client.APIError
-				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) {
+				if ifNotExists && errors.As(err, &apiErr) && (apiErr.StatusCode == 400 || apiErr.StatusCode == 409) && nodeExists(name) {
 					if !quietFlag {
 						fmt.Fprintf(os.Stdout, "Node %q already exists, skipping.\n", name)
 					}
@@ -67,4 +67,9 @@ Examples:
 	cmd.Flags().BoolVar(&ifNotExists, "if-not-exists", false, "Don't error if the node already exists")
 
 	return cmd
+}
+
+func nodeExists(name string) bool {
+	_, err := jenkinsClient.GetNode(name)
+	return err == nil
 }

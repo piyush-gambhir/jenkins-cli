@@ -13,6 +13,7 @@ import (
 
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/client"
 	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/config"
+	"github.com/piyush-gambhir/jenkins-cli/cli-go/internal/output"
 )
 
 func newJobBuildTestServer(t *testing.T) (*httptest.Server, *client.Client, *http.ServeMux) {
@@ -66,8 +67,8 @@ func TestTriggerBuild_WithParams(t *testing.T) {
 
 	mux.HandleFunc("/job/my-pipeline/buildWithParameters", func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		gotBranch = r.URL.Query().Get("BRANCH")
-		gotEnv = r.URL.Query().Get("ENV")
+		gotBranch = r.PostFormValue("BRANCH")
+		gotEnv = r.PostFormValue("ENV")
 		w.Header().Set("Location", ts.URL+"/queue/item/43/")
 		w.WriteHeader(http.StatusCreated)
 	})
@@ -375,5 +376,138 @@ func TestStreamBuildLog_ContextTimeout(t *testing.T) {
 	output := buf.String()
 	if !strings.Contains(output, "Chunk 1") {
 		t.Errorf("expected at least 'Chunk 1' in partial output, got %q", output)
+	}
+}
+
+func TestJobBuildCmd_FollowWithoutWaitStreams(t *testing.T) {
+	var streamed, fullLog bool
+	useTestJenkins(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == "POST" && r.URL.Path == "/job/my-pipeline/build":
+			w.Header().Set("Location", "http://"+r.Host+"/queue/item/70/")
+			w.WriteHeader(http.StatusCreated)
+		case r.URL.Path == "/queue/item/70/api/json":
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"id": 70, "executable": {"number": 5, "url": "http://%s/job/my-pipeline/5/"}}`, r.Host)
+		case r.URL.Path == "/job/my-pipeline/5/logText/progressiveText":
+			streamed = true
+			w.Header().Set("X-Text-Size", "10")
+			fmt.Fprint(w, "streamed\n")
+		case r.URL.Path == "/job/my-pipeline/5/api/json":
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"number": 5, "result": "SUCCESS", "building": false}`)
+		case r.URL.Path == "/job/my-pipeline/5/consoleText":
+			fullLog = true
+			fmt.Fprint(w, "full log\n")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}, output.FormatTable)
+
+	cmd := newJobBuildCmd()
+	cmd.SetContext(context.Background())
+	if err := cmd.ParseFlags([]string{"--follow"}); err != nil {
+		t.Fatal(err)
+	}
+	out, err := captureStdout(t, func() error { return cmd.RunE(cmd, []string{"my-pipeline"}) })
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !streamed || fullLog {
+		t.Errorf("expected --follow to stream progressive text, streamed=%v consoleText=%v output=%q", streamed, fullLog, out)
+	}
+}
+
+func TestJobBuildCmd_FollowTimesOut(t *testing.T) {
+	useTestJenkins(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == "POST" && r.URL.Path == "/job/my-pipeline/build":
+			w.Header().Set("Location", "http://"+r.Host+"/queue/item/71/")
+			w.WriteHeader(http.StatusCreated)
+		case r.URL.Path == "/queue/item/71/api/json":
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(w, `{"id": 71, "executable": {"number": 6, "url": "http://%s/job/my-pipeline/6/"}}`, r.Host)
+		case r.URL.Path == "/job/my-pipeline/6/logText/progressiveText":
+			w.Header().Set("X-Text-Size", "0")
+			w.Header().Set("X-More-Data", "true")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}, output.FormatTable)
+
+	cmd := newJobBuildCmd()
+	cmd.SetContext(context.Background())
+	if err := cmd.ParseFlags([]string{"--follow", "--timeout", "1s"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := captureStdout(t, func() error { return cmd.RunE(cmd, []string{"my-pipeline"}) })
+	if err == nil || !strings.Contains(err.Error(), "did not finish within") {
+		t.Fatalf("expected a timeout error, got %v", err)
+	}
+}
+
+func TestJobBuildCmd_FollowWithoutQueueLocationFails(t *testing.T) {
+	useTestJenkins(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" && r.URL.Path == "/job/my-pipeline/build" {
+			w.WriteHeader(http.StatusCreated)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}, output.FormatTable)
+
+	cmd := newJobBuildCmd()
+	cmd.SetContext(context.Background())
+	if err := cmd.ParseFlags([]string{"--follow", "--timeout", "5s"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := captureStdout(t, func() error { return cmd.RunE(cmd, []string{"my-pipeline"}) })
+	if err == nil || !strings.Contains(err.Error(), "no queue location") {
+		t.Fatalf("expected a missing queue location error, got %v", err)
+	}
+}
+
+func TestTriggerBuild_SeeOtherReturnsExistingQueueItem(t *testing.T) {
+	ts, c, mux := newJobBuildTestServer(t)
+	defer ts.Close()
+
+	mux.HandleFunc("/job/my-pipeline/buildWithParameters", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", ts.URL+"/queue/item/99/")
+		w.WriteHeader(http.StatusSeeOther)
+	})
+	mux.HandleFunc("/queue/item/99/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "<html>queue item page</html>")
+	})
+
+	ql, err := c.TriggerBuild("my-pipeline", map[string]string{"ENV": "prod"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(ql.QueueURL, "/queue/item/99") {
+		t.Errorf("expected the existing queue item from the 303, got %q", ql.QueueURL)
+	}
+}
+
+func TestTriggerBuild_FollowsTemporaryRedirect(t *testing.T) {
+	ts, c, mux := newJobBuildTestServer(t)
+	defer ts.Close()
+
+	mux.HandleFunc("/job/old-name/build", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", ts.URL+"/job/my-pipeline/build")
+		w.WriteHeader(http.StatusTemporaryRedirect)
+	})
+	mux.HandleFunc("/job/my-pipeline/build", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			t.Errorf("expected the redirect to keep POST, got %s", r.Method)
+		}
+		w.Header().Set("Location", ts.URL+"/queue/item/7/")
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	ql, err := c.TriggerBuild("old-name", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(ql.QueueURL, "/queue/item/7") {
+		t.Errorf("expected the queue item after following the 307, got %q", ql.QueueURL)
 	}
 }
